@@ -1,7 +1,7 @@
 # IsleConnect — Website Strategy
 
 **Version 3.1 · 18 August 2026 · STRATEGY FROZEN**
-Supersedes v2.0 (Lean V1). Re-centred on Ryde, with all five open questions now resolved. The built site lives in `site/`; `site/BUILD-SPEC.md` carries the implementation detail and the decisions log.
+Supersedes v2.0 (Lean V1). Re-centred on Ryde, with all five open questions now resolved. The built site is this repository's root; `BUILD-SPEC.md` carries the implementation detail and the decisions log.
 
 From this version onward, changes should be execution quality — poster frames, mobile playback, load speed, story pages, the story-to-next journey, naming consistency — not further strategic editing.
 
