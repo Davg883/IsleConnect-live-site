@@ -1460,3 +1460,60 @@ a:hover { color: var(--navy); }
 }
 .routestrip__note b { color: var(--ink); }
 .routestrip__note a { color: var(--ink); }
+
+/* --------------------------------------------------------------------------
+   40. Placeband as route — the four names become stops on the same line
+        the rest of the homepage has been following.
+   -------------------------------------------------------------------------- */
+
+.placeband--route .placeband__names {
+  position: relative;
+  align-items: flex-end;
+  padding-top: 1.9rem;
+}
+/* The hairline runs behind the names at the height the incoming thread
+   segment finishes at, so the trace appears to pass straight through. */
+.placeband--route .placeband__names::before {
+  content: "";
+  position: absolute;
+  top: 0.85rem;
+  left: -10vw;
+  right: -10vw;
+  height: 1px;
+  background: rgba(22,36,61,0.30);
+}
+.placeband--route .placename { position: relative; }
+.placeband--route .placename::before {
+  content: "";
+  position: absolute;
+  top: -1.28rem;
+  left: 50%;
+  width: 6.8px;
+  height: 6.8px;
+  margin-left: -3.4px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+/* --------------------------------------------------------------------------
+   41. Beyond Ryde — a glimpse of what else this could be, not a third
+        product area. Deliberately the quietest thing on the page.
+   -------------------------------------------------------------------------- */
+
+.beyond-band { padding-block: calc(var(--band-y) * 0.62); }
+.beyond-band .band__head { margin-bottom: var(--space-md); }
+.beyond-band .band__head h2 {
+  font-size: var(--step-1);
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+.beyond-band .lede { font-size: var(--step-0); }
+.beyond-band .beyond-list li { padding: var(--space-sm) 0; }
+.beyond-band .beyond-list h3 {
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+.beyond-band .beyond-list p { font-size: 0.95rem; }
+.beyond-band .btn { font-size: 0.85rem; padding: 0.6rem 1.1rem; }

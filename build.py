@@ -184,14 +184,41 @@ THREAD_PATH = ("M0,72 C140,72 190,26 320,26 C450,26 500,74 640,74 "
 THREAD_DOTS = [(320, 26), (640, 74), (980, 22)]
 
 
-def thread():
+# Segments of one continuous route line. Each starts at the height the
+# previous one finished at, so a reader following the page down the homepage
+# sees a single engraved trace crossing every band rather than four separate
+# ornaments. Entry/exit heights are the first and last y in each path.
+#
+#   a  72 → 52     b  52 → 26     c  26 → 70     d  70 → 44     e  44 → 62
+#
+# Segments are only chained on the homepage. Elsewhere a single 'a' is still
+# a section rule, which is what it was designed as.
+THREAD_SEGMENTS = {
+    "a": (THREAD_PATH, THREAD_DOTS),
+    "b": ("M0,52 C150,52 200,80 340,80 C470,80 520,30 660,30 "
+          "C800,30 850,64 1000,64 C1100,64 1150,26 1200,26",
+          [(340, 80), (660, 30), (1000, 64)]),
+    "c": ("M0,26 C130,26 180,58 320,58 C450,58 500,24 640,24 "
+          "C790,24 840,72 990,72 C1090,72 1150,70 1200,70",
+          [(320, 58), (640, 24), (990, 72)]),
+    "d": ("M0,70 C140,70 190,34 330,34 C460,34 510,76 650,76 "
+          "C790,76 840,30 980,30 C1080,30 1140,44 1200,44",
+          [(330, 34), (650, 76), (980, 30)]),
+    "e": ("M0,44 C160,44 210,74 350,74 C480,74 530,28 670,28 "
+          "C810,28 860,58 1010,58 C1110,58 1160,62 1200,62",
+          [(350, 74), (670, 28), (1010, 58)]),
+}
+
+
+def thread(seg="a"):
     """The story thread — an engraved route line that draws itself as you
     scroll. Used between sections to say 'stories connect places' without
     writing it down."""
-    dots = "".join('<circle cx="%d" cy="%d" r="3.4"/>' % (x, y) for x, y in THREAD_DOTS)
+    path, dot_list = THREAD_SEGMENTS[seg]
+    dots = "".join('<circle cx="%d" cy="%d" r="3.4"/>' % (x, y) for x, y in dot_list)
     return f"""      <svg class="thread" viewBox="0 0 1200 100" preserveAspectRatio="none"
            role="presentation" aria-hidden="true" focusable="false">
-        <path d="{THREAD_PATH}"/>{dots}
+        <path d="{path}"/>{dots}
       </svg>
 """
 
@@ -214,10 +241,14 @@ def marks(*kinds):
     return '<ul class="marks">%s</ul>' % items
 
 
-def placeband(*names):
-    """Place typography — location names set large enough to read as landscape."""
+def placeband(*names, route=False):
+    """Place typography — location names set large enough to read as landscape.
+
+    route=True hangs each name off the story thread, so the four places read
+    as stops on the same line the rest of the page has been following."""
     spans = "".join('<span class="placename">%s</span>' % n for n in names)
-    return f"""  <div class="placeband" aria-hidden="true">
+    cls = "placeband placeband--route" if route else "placeband"
+    return f"""  <div class="{cls}" aria-hidden="true">
     <div class="placeband__names">{spans}</div>
   </div>
 """
@@ -500,7 +531,7 @@ def build_index():
   <!-- ============ 2 · TWO FLAGSHIP EXPERIENCES ============ -->
   <section class="band band--ivory" aria-labelledby="flagship-h">
     <div class="wrap">
-      <div class="band__head">
+{thread('a')}      <div class="band__head">
         <span class="eyebrow">See it working</span>
         <h2 id="flagship-h">Two ways to discover Ryde</h2>
       </div>
@@ -536,7 +567,7 @@ def build_index():
   </section>
 
   <div class="wrap">
-{thread()}  </div>
+{thread('b')}  </div>
 
   <!-- ============ 3 · HOW IT WORKS ============ -->
   <section class="band band--navy" aria-labelledby="how-h">
@@ -549,10 +580,10 @@ def build_index():
       <div class="grid grid--3 steps">
         <div class="step"><span class="step__num" aria-hidden="true">1</span><h3>Discover</h3><p>Find a story connected to where you are.</p></div>
         <div class="step"><span class="step__num" aria-hidden="true">2</span><h3>Experience</h3><p>Watch, listen or explore the story on your phone.</p></div>
-        <div class="step"><span class="step__num" aria-hidden="true">3</span><h3>Go</h3><p>Visit the next place, venue or story nearby.</p></div>
+        <div class="step"><span class="step__num" aria-hidden="true">3</span><h3>Go</h3><p>Find the next story, place to visit, or somewhere local to stop.</p></div>
       </div>
       <p class="band__close">The digital experience is there to help you discover more of the real place.</p>
-    </div>
+{thread('c')}    </div>
   </section>
 
   <!-- ============ 4 · EXPLORE RYDE — editorial grid, not a card row ============ -->
@@ -617,19 +648,19 @@ def build_index():
       <div class="btn-row" style="margin-top:var(--space-lg)">
         <a class="btn btn--ghost-dark" href="explore.html">See all stories</a>
       </div>
-    </div>
+{thread('d')}    </div>
   </section>
 
-{placeband('Ryde', 'Appley', 'Puckpool', 'Seaview')}
+{placeband('Ryde', 'Appley', 'Puckpool', 'Seaview', route=True)}
   <!-- ============ 5 · THE TWO COLLECTIONS ============ -->
   <section class="band band--ivory-deep" aria-labelledby="coll-h">
     <div class="wrap">
       <div class="band__head">
         <span class="eyebrow">Collections</span>
         <h2 id="coll-h">Stories that belong together</h2>
-        <p class="lede">Individual stories are useful. Curated collections are what turn a visit into a route.</p>
+        <p class="lede">One story makes you stop. A trail gives you somewhere to go next.</p>
       </div>
-{thread()}
+{thread('e')}
       <div class="grid grid--2">
         <div class="audience">
           <span class="eyebrow">Ryde 140</span>
@@ -681,8 +712,8 @@ def build_index():
 {trust_panel()}    </div>
   </section>
 
-  <!-- ============ 8 · BEYOND RYDE ============ -->
-  <section class="band band--ivory-deep" aria-labelledby="beyond-h">
+  <!-- ============ 8 · BEYOND RYDE — the quietest band on the page ============ -->
+  <section class="band band--ivory-deep beyond-band" aria-labelledby="beyond-h">
     <div class="wrap">
       <div class="band__head">
         <span class="eyebrow">What's coming next</span>
@@ -782,7 +813,7 @@ def build_explore():
       <div class="grid grid--3 steps">
         <div class="step"><span class="step__num" aria-hidden="true">1</span><h3>Discover</h3><p>Find a story connected to where you are.</p></div>
         <div class="step"><span class="step__num" aria-hidden="true">2</span><h3>Experience</h3><p>Watch, listen or explore the story on your phone.</p></div>
-        <div class="step"><span class="step__num" aria-hidden="true">3</span><h3>Go</h3><p>Visit the next place, venue or story nearby.</p></div>
+        <div class="step"><span class="step__num" aria-hidden="true">3</span><h3>Go</h3><p>Find the next story, place to visit, or somewhere local to stop.</p></div>
       </div>
       <p class="band__close">The digital experience is there to help you discover more of the real place.</p>
     </div>
