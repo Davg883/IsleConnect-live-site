@@ -47,6 +47,7 @@ DESIGN-LANGUAGE.md          the five visual behaviours that make it IsleConnect
 ASSET-MANIFEST.md           the files — what's in, what's still needed
 EXPERIENCE-MANIFEST.md      what must exist for a story to go live
 TRAIL-STOPS.md              canonical nine-stop route record
+MEASUREMENT.md              the anonymous event layer, and how to switch it on
 ```
 
 ## Editing

@@ -72,6 +72,33 @@ And then it gets measured. **That first real directions number matters more comm
 
 ---
 
+## Leads from the earlier concept build
+
+Material recovered from the previous Next.js prototype (`isleconnect/public/media`). **None of this is confirmed and none of it is published as fact.** It is recorded here because it is the only existing evidence of how the route was being numbered and named before the current system was frozen.
+
+### A numbering conflict, not a correction
+
+The signage mockup now shown on `for-partners.html` reads:
+
+> **YOU ARE NEAR STOP 5** — Puckpool Pay Office: The Shrapnel Incident
+
+That contradicts the canonical system in two ways at once, and the contradiction is informative:
+
+- **It says Stop 5, and the film says Stop 7.** The film is the source of the canonical numbering, so the film wins. The mockup is treated as earlier draft artwork and captioned as such on the page.
+- **It says "Puckpool Pay Office", which is not "Puckpool Battery".** These may be two different places on the same site. If so, the Pay Office is a **candidate name for one of the five unnamed stops** — and "The Shrapnel Incident" is a story hook that someone, at some point, had a source for.
+
+**Action:** ask whoever produced the signage artwork where the Stop 5 numbering and the Pay Office name came from. That single question may resolve two of the nine slots.
+
+### The Dell Cafe may itself be a wartime site
+
+`dell-cafe-ww2.png` in the old build is a black-and-white reconstruction of a low pavilion-style building captioned **"HMS MEDINA — PORT DEPOT NO. 3"**, with blast-taped windows, sandbags and a despatch rider's motorcycle. The filename ties it to The Dell Cafe — the venue already built into the Puckpool page's `Nearby` block.
+
+If that is evidenced, the commercial mechanism and the story become the same thing: the nearby venue *is* a stop. That would be the strongest possible demonstration of story → nearby.
+
+**It is not published.** HMS Medina and a numbered port depot are checkable claims, and nothing goes on the site under a reconstruction mark without a source behind it. Verify first, then decide whether The Dell Cafe is a venue, a stop, or both.
+
+---
+
 ## Stops 1–6, 8, 9 — the working brief
 
 For whoever names them:

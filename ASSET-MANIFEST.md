@@ -49,6 +49,7 @@ Also produced:
 | `favicon.ico` | Tab icon. 48/32/16 px, transparent corners, generated from the mark with a contrast lift so the tower survives at 16px. |
 | `assets/img/favicon-32.png` | 32 px PNG for browsers that prefer it to the `.ico`. |
 | `assets/img/apple-touch-icon.png` | 180 × 180 iOS home-screen icon, laid on navy — iOS composites transparency onto white otherwise. |
+| `assets/img/trail-signage.jpg` | 1122 × 1402. QR signage mockup on a café counter, from the earlier concept build. Re-encoded from a 1.9 MB PNG to 203 KB. **Published with an explicit mockup caption** — the artwork says "Stop 5" and shows a reward scheme, neither of which is canonical. Replace with a photograph of real signage in a real Ryde venue as soon as one exists. |
 
 > **All three are derived from the placeholder PNG and inherit its ceiling.** At 16px the lighthouse is a suggestion rather than a shape. **Regenerate the whole set from the vector** the moment it arrives — a favicon is the one place where a 136px source is most obviously a 136px source.
 

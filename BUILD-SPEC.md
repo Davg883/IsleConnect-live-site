@@ -6,6 +6,7 @@ Built around the two products that exist: **Ryde 140** and the **Ryde to Seaview
 From this version, changes should be execution quality, not strategy.
 
 **Companion documents.** `EXPERIENCE-MANIFEST.md` — the production standard a story must meet to go live. `ASSET-MANIFEST.md` — the files. `TRAIL-STOPS.md` — the canonical nine-stop route record. `DESIGN-LANGUAGE.md` — the five behaviours that make the site identifiable with the logo hidden.
+`MEASUREMENT.md` — the anonymous behavioural event layer.
 
 ---
 
@@ -153,7 +154,7 @@ Skip link · semantic landmarks · gold `:focus-visible` outlines · `aria-curre
 8. Self-host fonts · 9. True brand hex values · 10. Contributor bios and portraits · 11. Accessibility statement · 12. WebVTT captions · 13. WebP conversion
 14. **Test standing at Puckpool, on a phone, on 4G.** That is the actual use case, and no desktop test substitutes for it.
 
-**Analytics — instrument these three first**, because they are the venue proposition in plain numbers:
+**Analytics — built, and off by default.** The thirteen-event layer from the Vectis ONE concept is now wired into every page and sends nothing until `EVENTS_ENDPOINT` is set in `build.py`. See `MEASUREMENT.md`. Report these three first, because they are the venue proposition in plain numbers:
 
 - people who opened a story
 - people who continued to a second story

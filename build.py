@@ -14,6 +14,13 @@ import os
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 
+# Where anonymous behavioural events are posted. Empty means the measurement
+# layer stays inert: it instruments every page and buffers events in the
+# browser for inspection, but sends nothing and writes no storage. Set this
+# to a real collector URL to switch it on — and write the privacy copy first.
+# See MEASUREMENT.md.
+EVENTS_ENDPOINT = ""
+
 NAV = [
     ("explore.html",       "Explore Ryde"),
     ("ryde-140.html",      "Ryde 140"),
@@ -55,7 +62,18 @@ def rel(path, depth):
     return ("../" * depth) + path
 
 
-def head(title, description, depth):
+def head(title, description, depth, page="page", story=None, trail=None, stop=None):
+    """page/story/trail/stop become data-ic-* attributes on <body>, which is
+    where the measurement layer reads its context from. See MEASUREMENT.md."""
+    events = (f'\n<meta name="ic-events" content="{EVENTS_ENDPOINT}">'
+              if EVENTS_ENDPOINT else "")
+    attrs = f' data-ic-page="{page}"'
+    if story:
+        attrs += f' data-ic-story="{story}"'
+    if trail:
+        attrs += f' data-ic-trail="{trail}"'
+    if stop:
+        attrs += f' data-ic-stop="{stop}"'
     return f"""<!DOCTYPE html>
 <html lang="en-GB">
 <head>
@@ -67,7 +85,7 @@ def head(title, description, depth):
 <meta property="og:description" content="{description}">
 <meta property="og:type" content="website">
 <meta property="og:image" content="{rel('assets/img/card-ryde140.jpg', depth)}">
-<meta name="theme-color" content="#16243D">
+<meta name="theme-color" content="#16243D">{events}
 <link rel="icon" href="{rel('favicon.ico', depth)}" sizes="48x48">
 <link rel="icon" type="image/png" href="{rel('assets/img/favicon-32.png', depth)}" sizes="32x32">
 <link rel="apple-touch-icon" href="{rel('assets/img/apple-touch-icon.png', depth)}">
@@ -76,7 +94,7 @@ def head(title, description, depth):
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{rel('assets/css/isleconnect.css', depth)}">
 </head>
-<body>
+<body{attrs}>
 
 <a class="skip-link" href="#main">Skip to content</a>
 """
@@ -220,6 +238,48 @@ def thennow(then_img, now_img, alt_now, depth, hold, back, extra_class="", inner
                 data-hold="{hold}" data-back="{back}"><span>{hold}</span></button>
       </div>
 """
+
+
+def routestrip(depth):
+    """Nine numbered slots, drawn as a strip. Only the stops we can evidence
+    carry a name; the rest are visibly empty sockets rather than invented
+    places. The gap is the point — it shows a visitor (and a venue) that the
+    route is a real system with known and unknown positions, not a vague walk.
+
+    Named stops whose number is not yet confirmed cannot be placed on a
+    numbered strip, so they are listed underneath instead."""
+    placed = {st["n"]: st for st in TRAIL_STOPS if st["n"]}
+    unplaced = [st for st in TRAIL_STOPS if not st["n"]]
+
+    pips = ""
+    for n in range(1, TRAIL_TOTAL + 1):
+        st = placed.get(n)
+        if st:
+            pips += f"""          <li class="routestrip__stop is-known">
+            <span class="routestrip__n">{n}</span>
+            <a href="{rel('ryde/' + st['slug'] + '.html', depth)}">{st['title']}</a>
+          </li>
+"""
+        else:
+            pips += f"""          <li class="routestrip__stop">
+            <span class="routestrip__n">{n}</span>
+            <span class="routestrip__tbc">To be confirmed<span class="visually-hidden">, stop {n}</span></span>
+          </li>
+"""
+
+    names = " &nbsp;·&nbsp; ".join(
+        f'<a href="{rel("ryde/" + st["slug"] + ".html", depth)}">{st["title"]}</a>'
+        for st in unplaced)
+    tail = ""
+    if names:
+        tail = f"""      <p class="routestrip__note"><b>Named, not yet numbered:</b> {names}. Their positions are confirmed on the ground before they are published as stop numbers.</p>
+"""
+
+    return f"""      <div class="routestrip">
+        <ol class="routestrip__list" aria-label="The nine stops on the Ryde to Seaview Wartime Trail">
+{pips}        </ol>
+      </div>
+{tail}"""
 
 
 def video_block(slug, poster, label, note, depth, variant="720"):
@@ -408,7 +468,8 @@ def node_card(n, depth):
 def build_index():
     d = 0
     html = head("IsleConnect — Bring Ryde to life",
-                "Explore the stories, places and people that shaped Ryde — and discover where to go next.", d)
+                "Explore the stories, places and people that shaped Ryde — and discover where to go next.", d,
+                page="home")
     html += header("", d, over=True)
 
     nodes = "".join(node_card(n, d) for n in NODES)
@@ -483,6 +544,7 @@ def build_index():
       <div class="band__head band__head--centre">
         <span class="eyebrow">How IsleConnect works</span>
         <h2 id="how-h">Discover. Experience. Go.</h2>
+        <p class="assure"><b>No app to download.</b> Scan a code or open a link — it runs in the browser you already have.</p>
       </div>
       <div class="grid grid--3 steps">
         <div class="step"><span class="step__num" aria-hidden="true">1</span><h3>Discover</h3><p>Find a story connected to where you are.</p></div>
@@ -573,13 +635,13 @@ def build_index():
           <span class="eyebrow">Ryde 140</span>
           <h3>A town explored across the centuries</h3>
           <p>A growing collection exploring Ryde's buildings, people and stories across the centuries.</p>
-          <a class="link-arrow" href="ryde-140.html">Explore Ryde 140</a>
+          <a class="link-arrow" href="ryde-140.html" data-ic-event="trail_selected" data-ic-trail="ryde-140">Explore Ryde 140</a>
         </div>
         <div class="audience">
           <span class="eyebrow">Ryde to Seaview</span>
           <h3>Ryde to Seaview Wartime Trail</h3>
           <p>A self-guided journey through the places that defended, supplied and lived through the Island's wartime years.</p>
-          <a class="link-arrow" href="wartime-trail.html">Follow the route</a>
+          <a class="link-arrow" href="wartime-trail.html" data-ic-event="trail_selected" data-ic-trail="wartime-trail">Follow the route</a>
         </div>
       </div>
     </div>
@@ -673,7 +735,8 @@ def build_explore():
     d = 0
     nodes = "".join(node_card(n, d) for n in NODES)
     html = head("Explore Ryde — IsleConnect",
-                "Stories, places and people across Ryde and the coast to Seaview.", d)
+                "Stories, places and people across Ryde and the coast to Seaview.", d,
+                page="explore")
     html += header("explore.html", d)
     html += f"""
   <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
@@ -698,12 +761,12 @@ def build_explore():
         <div class="audience">
           <h3>Ryde 140</h3>
           <p>A growing collection exploring Ryde's buildings, people and stories across the centuries.</p>
-          <a class="link-arrow" href="ryde-140.html">Explore Ryde 140</a>
+          <a class="link-arrow" href="ryde-140.html" data-ic-event="trail_selected" data-ic-trail="ryde-140">Explore Ryde 140</a>
         </div>
         <div class="audience">
           <h3>Ryde to Seaview Wartime Trail</h3>
           <p>A self-guided journey through the places that defended, supplied and lived through the Island's wartime years.</p>
-          <a class="link-arrow" href="wartime-trail.html">Follow the route</a>
+          <a class="link-arrow" href="wartime-trail.html" data-ic-event="trail_selected" data-ic-trail="wartime-trail">Follow the route</a>
         </div>
       </div>
     </div>
@@ -714,6 +777,7 @@ def build_explore():
       <div class="band__head band__head--centre">
         <span class="eyebrow">How IsleConnect works</span>
         <h2>Discover. Experience. Go.</h2>
+        <p class="assure"><b>No app to download.</b> Scan a code or open a link — it runs in the browser you already have.</p>
       </div>
       <div class="grid grid--3 steps">
         <div class="step"><span class="step__num" aria-hidden="true">1</span><h3>Discover</h3><p>Find a story connected to where you are.</p></div>
@@ -733,7 +797,8 @@ def build_ryde140():
     items = [n for n in NODES if n["meta"].startswith("Ryde 140")]
     cards = "".join(node_card(n, d) for n in items)
     html = head("Ryde 140 — IsleConnect",
-                "A growing collection exploring Ryde's buildings, people and stories across the centuries.", d)
+                "A growing collection exploring Ryde's buildings, people and stories across the centuries.", d,
+                page="collection", trail="ryde-140")
     html += header("ryde-140.html", d, over=True)
     html += f"""
   <section class="hero hero--short">
@@ -826,7 +891,8 @@ def build_wartime():
         </li>
 """
     html = head("Ryde to Seaview Wartime Trail — IsleConnect",
-                "A self-guided journey through the places that defended, supplied and lived through the Island's wartime years.", d)
+                "A self-guided journey through the places that defended, supplied and lived through the Island's wartime years.", d,
+                page="collection", trail="wartime-trail")
     html += header("wartime-trail.html", d, over=True)
     html += f"""
   <section class="hero hero--short">
@@ -884,8 +950,9 @@ def build_wartime():
       <div class="band__head">
         <span class="eyebrow">The route</span>
         <h2>Stops along the way</h2>
+        <p class="lede">Nine stops from Ryde to Seaview. Four are named so far.</p>
       </div>
-{thread()}      <ol class="route">
+{routestrip(d)}{thread()}      <ol class="route">
 {stops}      </ol>
     </div>
   </section>
@@ -901,7 +968,7 @@ def build_wartime():
         <h2>Run a venue on this route?</h2>
         <p>Walkers pass your door already. IsleConnect gives them a reason to stop.</p>
         <div class="btn-row btn-row--centre">
-          <a class="btn btn--primary" href="partners/venues.html">Become a partner</a>
+          <a class="btn btn--primary" href="partners/venues.html" data-ic-event="sponsor_enquiry">Become a partner</a>
         </div>
       </div>
     </div>
@@ -936,7 +1003,11 @@ def build_story(slug):
         </article>
 """
 
-    html = head(f'{s["title"]} — IsleConnect', s["line"], d)
+    stop_no = next((st["n"] for st in TRAIL_STOPS if st["slug"] == slug and st["n"]), None)
+    html = head(f'{s["title"]} — IsleConnect', s["line"], d,
+                page="story", story=slug,
+                trail=s["collection_href"].replace(".html", ""),
+                stop=stop_no)
     html += header(s["collection_href"], d, over=True)
     transcript = "\n".join(f"          <p>{line}</p>" for line in s.get("transcript", []))
     transcript_block = ""
@@ -961,7 +1032,7 @@ def build_story(slug):
           <h3>{nb['name']}</h3>
           <p>{nb['line']}</p>
         </div>
-        <a class="btn btn--ghost-dark" href="{rel('contact.html', d)}">Get directions</a>
+        <a class="btn btn--ghost-dark" href="{rel('contact.html', d)}" data-ic-event="directions_clicked">Get directions</a>
       </div>
       <p class="notice" style="margin-top:var(--space-md)"><b>Confirm before launch.</b> {nb['name']} appears as a local retail partner on the film's end card. Publish this block only if the agreement is in place — and wire "Get directions" to a real map link.</p>
     </section>
@@ -1057,7 +1128,9 @@ def build_story(slug):
 def build_soon(slug):
     d = 1
     coll, coll_href, title, line = SOON[slug]
-    html = head(f"{title} — IsleConnect", line, d)
+    html = head(f"{title} — IsleConnect", line, d,
+                page="story-in-development", story=slug,
+                trail=coll_href.replace(".html", ""))
     html += header(coll_href, d)
     html += f"""
   <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
@@ -1095,7 +1168,8 @@ def build_soon(slug):
 def build_partners():
     d = 0
     html = head("For Partners — IsleConnect",
-                "Be part of the journey. IsleConnect helps visitors discover the story around them.", d)
+                "Be part of the journey. IsleConnect helps visitors discover the story around them.", d,
+                page="partners")
     html += header("for-partners.html", d, over=True)
     html += f"""
   <section class="hero hero--short">
@@ -1110,7 +1184,7 @@ def build_partners():
           <h1>Be part of the journey.</h1>
           <p class="hero__sub">IsleConnect helps visitors discover the story around them — and gives nearby businesses and attractions a natural place in that journey.</p>
           <div class="btn-row">
-            <a class="btn btn--primary" href="contact.html">Become a Ryde partner</a>
+            <a class="btn btn--primary" href="contact.html" data-ic-event="sponsor_enquiry">Become a Ryde partner</a>
           </div>
         </div>
       </div>
@@ -1133,6 +1207,21 @@ def build_partners():
           <p>Understand whether visitors continue, explore or take an action.</p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section class="band band--navy">
+    <div class="wrap">
+      <div class="band__head">
+        <span class="eyebrow">Where it meets the street</span>
+        <h2>It starts with a card on your counter</h2>
+        <p class="lede">No app, no hardware, no screen to maintain. A visitor scans, the story opens in their browser, and the next place on the route is one tap away.</p>
+      </div>
+      <figure class="figure">
+        <img src="assets/img/trail-signage.jpg" width="1122" height="1402" loading="lazy" decoding="async"
+             alt="Two IsleConnect QR cards in acrylic holders on a caf&eacute; counter: a stop card reading &quot;You are near Stop 5&quot; with a scan code, and a smaller route reward partner card.">
+        <figcaption class="figure__cap"><b>Signage design mockup.</b> The stop number and title shown are placeholder artwork from an earlier draft — the canonical nine-stop list is still being confirmed, and no reward scheme is running yet. What is real is the mechanism: a code on a counter, a story in the browser, and a measurable onward journey.</figcaption>
+      </figure>
     </div>
   </section>
 
@@ -1201,6 +1290,22 @@ PARTNER_PAGES = {
 }
 
 
+# One line per page, set large, in the display face. The commercial promise
+# for a venue and the credibility claim for an organisation are different
+# sentences and belong in different places — but they are the same component.
+PARTNER_PROMISE = {
+    "venues": "Turn local curiosity into local visits.",
+    "organisations": "Built in Ryde. Tested in the real world.",
+}
+
+PROMISE_ABOUT = "Built in Ryde. Tested in the real world."
+
+
+def promise(line):
+    return f"""      <p class="promise">{line}</p>
+""" if line else ""
+
+
 def build_partner_page(key):
     d = 1
     title, sub, intro, points = PARTNER_PAGES[key]
@@ -1229,7 +1334,7 @@ def build_partner_page(key):
   </section>
 
 """
-    html = head(f"{title} — IsleConnect", sub, d)
+    html = head(f"{title} — IsleConnect", sub, d, page=f"partner-{key}")
     html += header("for-partners.html", d)
     html += f"""
   <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
@@ -1240,11 +1345,11 @@ def build_partner_page(key):
         <h1>{title}</h1>
         <p class="lede">{sub}</p>
       </div>
-      <div class="measure"><p>{intro}</p></div>
+{promise(PARTNER_PROMISE.get(key))}      <div class="measure"><p>{intro}</p></div>
       <div class="grid grid--3" style="margin-top:var(--space-xl)">
 {pts}      </div>
       <div class="btn-row" style="margin-top:var(--space-lg)">
-        <a class="btn btn--primary" href="{rel('contact.html', d)}">Start a conversation</a>
+        <a class="btn btn--primary" href="{rel('contact.html', d)}" data-ic-event="sponsor_enquiry">Start a conversation</a>
       </div>
     </div>
   </section>
@@ -1259,12 +1364,12 @@ def build_partner_page(key):
         <div class="audience">
           <h3>Ryde 140</h3>
           <p>Evidence-led reconstructions of the buildings, people and moments that made the town.</p>
-          <a class="link-arrow" href="{rel('ryde-140.html', d)}">Explore Ryde 140</a>
+          <a class="link-arrow" href="{rel('ryde-140.html', d)}" data-ic-event="trail_selected" data-ic-trail="ryde-140">Explore Ryde 140</a>
         </div>
         <div class="audience">
           <h3>Ryde to Seaview Wartime Trail</h3>
           <p>A self-guided route through the Island's wartime coastline.</p>
-          <a class="link-arrow" href="{rel('wartime-trail.html', d)}">Follow the route</a>
+          <a class="link-arrow" href="{rel('wartime-trail.html', d)}" data-ic-event="trail_selected" data-ic-trail="wartime-trail">Follow the route</a>
         </div>
       </div>
     </div>
@@ -1276,7 +1381,7 @@ def build_partner_page(key):
         <h2>Be part of the journey.</h2>
         <p>Tell us what you run or what you hold. We'll tell you honestly whether we think there's a story in it.</p>
         <div class="btn-row btn-row--centre">
-          <a class="btn btn--primary" href="{rel('contact.html', d)}">Start a conversation</a>
+          <a class="btn btn--primary" href="{rel('contact.html', d)}" data-ic-event="sponsor_enquiry">Start a conversation</a>
         </div>
       </div>
     </div>
@@ -1289,7 +1394,8 @@ def build_partner_page(key):
 def build_about():
     d = 0
     html = head("About — IsleConnect",
-                "IsleConnect brings Ryde's stories to life — helping people discover the history, places and businesses around them.", d)
+                "IsleConnect brings Ryde's stories to life — helping people discover the history, places and businesses around them.", d,
+                page="about")
     html += header("about.html", d)
     html += f"""
   <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
@@ -1298,7 +1404,7 @@ def build_about():
         <span class="eyebrow">About</span>
         <h1>We put stories back where they happened.</h1>
       </div>
-      <div class="measure">
+{promise(PROMISE_ABOUT)}      <div class="measure">
         <p>IsleConnect brings Ryde's stories to life — helping people discover the history, places and businesses around them.</p>
         <p>A fort with no interpretation is a wall. A frontage on Union Street is a frontage, unless someone tells you it is not the one that opened. The material is almost always already there — in an archive, in an engraving, or in the head of someone who has spent thirty years finding it out. What is usually missing is a way for a visitor to meet it at the moment they are standing in front of the place.</p>
         <p>That is the whole job.</p>
@@ -1341,7 +1447,7 @@ def build_about():
 
 def build_contact():
     d = 0
-    html = head("Contact — IsleConnect", "Tell us about your venue, story or records.", d)
+    html = head("Contact — IsleConnect", "Tell us about your venue, story or records.", d, page="contact")
     html += header("", d)
     html += """
   <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
@@ -1390,7 +1496,7 @@ def build_contact():
 
 def build_stub(slug, title, body):
     d = 0
-    html = head(f"{title} — IsleConnect", title, d)
+    html = head(f"{title} — IsleConnect", title, d, page=f"legal-{slug}")
     html += header("", d)
     html += f"""
   <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
