@@ -1,0 +1,82 @@
+name: Verify production
+
+# Deliberately NOT run on push. A push and a Vercel deployment complete
+# asynchronously, so checking the live domain on push would inspect the
+# previous deployment and fail a good build.
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'Commit SHA the deployment must be serving (blank = whatever is live)'
+        required: false
+        default: ''
+      base:
+        description: 'Base URL to verify'
+        required: false
+        default: 'https://www.isleconnect.co.uk'
+      wait:
+        description: 'Seconds to wait for that commit to appear'
+        required: false
+        default: '600'
+
+  # Fires when a deployment provider reports a result.
+  deployment_status:
+
+jobs:
+  verify:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # A preview deployment must never trigger a production verification.
+      # Vercel has used both "Production" and "production" for this field, so
+      # compare lowercased in the shell rather than in an expression.
+      - name: Resolve target
+        id: t
+        env:
+          EVENT: ${{ github.event_name }}
+          DEPLOY_ENV: ${{ github.event.deployment.environment }}
+          DEPLOY_SHA: ${{ github.event.deployment.sha }}
+          IN_BASE: ${{ github.event.inputs.base }}
+          IN_SHA: ${{ github.event.inputs.commit }}
+          IN_WAIT: ${{ github.event.inputs.wait }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "run=true"                                    >> "$GITHUB_OUTPUT"
+            echo "base=${IN_BASE:-https://www.isleconnect.co.uk}" >> "$GITHUB_OUTPUT"
+            echo "sha=${IN_SHA:-}"                             >> "$GITHUB_OUTPUT"
+            echo "wait=${IN_WAIT:-600}"                        >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          env_lc="$(printf '%s' "${DEPLOY_ENV:-}" | tr '[:upper:]' '[:lower:]')"
+          echo "deployment environment: '${DEPLOY_ENV:-}' (normalised: '$env_lc')"
+          if [ "$env_lc" != "production" ]; then
+            echo "Not a production deployment — skipping live verification."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${DEPLOY_SHA:-}" ]; then
+            echo "Production deployment reported no SHA; cannot verify identity." >&2
+            exit 1
+          fi
+          echo "run=true"                                  >> "$GITHUB_OUTPUT"
+          echo "base=https://www.isleconnect.co.uk"        >> "$GITHUB_OUTPUT"
+          echo "sha=$DEPLOY_SHA"                           >> "$GITHUB_OUTPUT"
+          echo "wait=600"                                  >> "$GITHUB_OUTPUT"
+
+      - name: Verify the live domain
+        if: steps.t.outputs.run == 'true'
+        run: |
+          python3 tools/verify-live.py \
+            --base "${{ steps.t.outputs.base }}" \
+            --expect "${{ steps.t.outputs.sha }}" \
+            --wait "${{ steps.t.outputs.wait }}"

@@ -1,0 +1,55 @@
+name: Repository checks
+
+# Everything here runs against the checked-out branch only. Nothing touches
+# the production domain, so nothing here can race a deployment.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install -r requirements.txt
+
+      # Registry validation, publication-state gates, prohibited content,
+      # link resolution, video controls.
+      - name: Preflight
+        run: python3 tools/preflight.py
+
+      # If the committed HTML differs from what the records now produce, the
+      # repository has drifted and the deployed site would not match it.
+      #
+      # `git diff` alone is not enough: it reports modified and deleted tracked
+      # files but says nothing about a NEWLY generated page that was never
+      # committed. That page would deploy while CI stayed green. `git status
+      # --porcelain --untracked-files=all` reports all three, and it inspects
+      # without staging anything.
+      #
+      # build-info.json carries a build timestamp, so it is generated at deploy
+      # time and gitignored rather than committed — it is excluded from this
+      # comparison by .gitignore, which keeps the check deterministic.
+      - name: Committed output matches the registry
+        run: |
+          set -euo pipefail
+          drift="$(git status --porcelain --untracked-files=all -- \
+                     '*.html' 'sitemap.xml' 'robots.txt')"
+          if [ -n "$drift" ]; then
+            echo "Generated output differs from what is committed:"
+            echo
+            echo "$drift"
+            echo
+            echo "  ' M' changed   ' D' deleted   '??' generated but never committed"
+            echo
+            echo "Run: python3 build.py && git add -A && git commit"
+            exit 1
+          fi
+          echo "Committed output matches the registry."

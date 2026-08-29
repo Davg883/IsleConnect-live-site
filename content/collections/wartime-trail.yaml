@@ -1,0 +1,14 @@
+id: wartime-trail
+slug: wartime-trail
+publicName: Ryde to Seaview Wartime Trail
+displayName: Ryde to Seaview Wartime Trail
+status: published
+totalStops: 9
+lede: A self-guided journey through the places that defended, supplied and lived through the Island's wartime years.
+route: [Ryde Pier, Appley, Puckpool, Seaview]
+estimates:
+  dataStatus: estimate
+  distance: About 3 miles along the coast
+  time: Around two hours at a walking pace, longer if you stop
+internal:
+  note: Five of nine stops unnamed. See TRAIL-STOPS.md.

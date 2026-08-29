@@ -1,0 +1,31 @@
+id: puckpool-battery
+slug: ryde/puckpool-battery
+title: Puckpool Battery
+line: Stand where the guns watched the Solent.
+status: published
+collections: [wartime-trail]
+stop: 7
+location:
+  name: Puckpool Point
+  town: between Ryde and Seaview
+marks: [spot, archive, source]
+media:
+  video: puckpool-battery
+  poster: exp-puckpool-hero.jpg
+  label: The Sea-Face Guard · Puckpool Point
+  note: 22 seconds · sound on
+  rights: cleared
+thenNow: null
+governance:
+  editorialReview: complete
+  localReview: complete
+  historicalReview: pending
+  rightsRecord: complete
+  lastReviewed: 2026-08-18
+journey:
+  next: [royal-victoria-arcade, appley-tower]
+nearby: the-dell-cafe
+internal:
+  note: >
+    No present-day plate, so no Then/Now. puckpool-now.jpg is the highest
+    value outstanding asset after the vector logo.

@@ -1,0 +1,30 @@
+id: royal-victoria-arcade
+slug: ryde/royal-victoria-arcade
+title: Royal Victoria Arcade
+line: Stand in Union Street. See the Arcade as Ryde saw it in 1837.
+status: published
+collections: [ryde-140]
+location:
+  name: Union Street
+  town: Ryde
+marks: [recon, archive, source]
+media:
+  video: victoria-arcade
+  poster: exp-victoria-arcade-hero.jpg
+  label: Evidence-led AI reconstruction · c.1837
+  note: 20 seconds · sound on
+  rights: cleared
+thenNow:
+  then: arcade-then.jpg
+  now: arcade-now.jpg
+governance:
+  editorialReview: complete
+  localReview: complete
+  historicalReview: pending
+  rightsRecord: complete
+  lastReviewed: 2026-08-18
+journey:
+  next: [puckpool-battery, union-street]
+nearby: null
+internal:
+  note: Historical specialist review still outstanding; page states this.

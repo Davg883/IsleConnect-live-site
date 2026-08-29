@@ -4,3 +4,7 @@ desktop.ini
 .DS_Store
 __pycache__/
 *.pyc
+
+# Generated at build/deploy time — never committed, so drift checks stay
+# deterministic. See DEPLOY.md.
+build-info.json
