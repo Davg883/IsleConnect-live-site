@@ -52,14 +52,23 @@ MUST_EXIST = [
 # Retired. Each must either be gone, or redirect to its recorded destination.
 # It must never still serve the old page. See the redirect map in DEPLOY.md.
 RETIRED = {
-    "/explore/the-garlic-farm.html":      "/explore.html",
     "/explore/darker-side-of-wight.html": "/explore.html",
     "/explore/bembridge-fort.html":       "/explore.html",
     "/for-venues.html":                   "/partners/venues.html",
     "/for-creators.html":                 "/partners/creators.html",
     "/work-with-us.html":                 "/for-partners.html",
-    # Review material must never be public, redirect or otherwise.
-    "/review/town-hall-rebox.html":       None,
+}
+
+# Withdrawn, not moved. These must answer 404 or 410 and must NEVER redirect:
+# a redirect tells a visitor and a search engine that the thing still exists
+# somewhere in the programme, which is the claim being withdrawn.
+GONE = {
+    "/explore/the-garlic-farm.html":
+        "described a partnership that was never agreed — withdrawn outright, "
+        "not redirected, because redirecting to Explore implies it remains "
+        "part of the programme",
+    "/review/town-hall-rebox.html":
+        "review material must never be public, redirect or otherwise",
 }
 
 # Text that proves an old page is still being served rather than redirected.
@@ -215,10 +224,7 @@ def main():
         checked += 1
         location = headers.get("Location", "")
         if status in (301, 302, 307, 308):
-            if destination is None:
-                fails.append(f"{path} redirects but review material must be gone")
-                print(f"  {status}  {path} -> {location}   <-- must not exist")
-            elif destination.rstrip("/") in location.rstrip("/"):
+            if destination.rstrip("/") in location.rstrip("/"):
                 print(f"  {status}  {path} -> {location}")
             else:
                 fails.append(f"{path} redirects to {location}, expected {destination}")
@@ -233,6 +239,23 @@ def main():
             else:
                 fails.append(f"{path} returns 200; expected a redirect or 404")
                 print(f"  200  {path}   <-- should be gone or redirected")
+        else:
+            fails.append(f"{path} returned {status}")
+
+    # ---- 3b · withdrawn: gone outright, and never redirected ------------
+    print()
+    for path, why in GONE.items():
+        status, body, headers = fetch(base + path, follow=False)
+        checked += 1
+        location = headers.get("Location", "")
+        if status in (404, 410):
+            print(f"  {status}  {path}   (withdrawn)")
+        elif status in (301, 302, 307, 308):
+            fails.append(f"{path} redirects to {location}, but it must be gone: {why}")
+            print(f"  {status}  {path} -> {location}   <-- must not redirect")
+        elif status == 200:
+            fails.append(f"{path} is still being served, and it must be gone: {why}")
+            print(f"  200  {path}   <-- still live")
         else:
             fails.append(f"{path} returned {status}")
 

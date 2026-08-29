@@ -195,18 +195,42 @@ printed QR code or a shared link may still point at one.
 | `/for-venues.html` | `/partners/venues.html` | Renamed, same purpose — 301 |
 | `/for-creators.html` | `/partners/creators.html` | Renamed, same purpose — 301 |
 | `/work-with-us.html` | `/for-partners.html` | Renamed, same purpose — 301 |
-| `/explore/the-garlic-farm.html` | `/explore.html` **(307, temporary)** | Unapproved partnership. Redirect, not 404, in case a link was shared. Temporary until traffic, indexing and QR destinations are checked — a 301 is cached hard and difficult to take back. |
-| `/explore/darker-side-of-wight.html` | `/explore.html` **(307)** | Same |
+| `/explore/the-garlic-farm.html` | **none — must 404** | Described a partnership that was never agreed. Withdrawn, not moved. |
+| `/explore/darker-side-of-wight.html` | `/explore.html` **(307)** | Retired project page. Temporary until traffic, indexing and QR destinations are checked. |
 | `/explore/bembridge-fort.html` | `/explore.html` **(307)** | Same |
 | `/review/*` | none — must 404 | Review material is never public |
 
 The three renamed service pages use permanent redirects (301) because they are
-straightforward renames. The three retired project pages use **temporary
-redirects (307)** deliberately: a 301 is cached aggressively by browsers and
-intermediaries and is painful to reverse. Once traffic, indexing and any
-printed QR destinations have been checked, change `"permanent": false` to
-`true` — or to a `410` if you would rather the page say plainly that it is
-gone. `verify-live.py` accepts 301, 302, 307, 308, 404 and 410.
+straightforward renames.
+
+The two remaining project pages use **temporary redirects (307)** deliberately:
+a 301 is cached aggressively by browsers and intermediaries and is painful to
+reverse. Once traffic, indexing and any printed QR destinations have been
+checked, change `"permanent": false` to `true`, or remove the redirect so the
+URL is gone.
+
+**The Garlic Farm page is different, and deliberately so.** It has no redirect
+at all. Redirecting it to Explore would tell a visitor — and a search engine
+choosing a canonical URL — that the page still belongs somewhere in the
+programme. It does not: it made a claim about a partnership that was never
+agreed, and the honest response is withdrawal rather than relocation. A 307
+would additionally have kept the old URL in the search index, since a temporary
+redirect tells Google to retain the original.
+
+> **Why 404 and not 410.** 410 is the more precise status, but `vercel.json`
+> cannot express it. Its `redirects` property only emits redirect codes; the
+> legacy `routes` property can set an arbitrary status but cannot be combined
+> with `redirects`, `headers`, `cleanUrls` or `trailingSlash`, all of which
+> this config uses. The remaining route would be a serverless function, which
+> means adding a runtime to a deliberately static site for one dead URL.
+> Google treats 404 and 410 almost identically for removal — 410 is marginally
+> faster — so the cost is a few days of crawl latency, recovered by the Search
+> Console removal recorded in `RELEASE-GATES.md` §3b.
+
+`verify-live.py` enforces the distinction: retired URLs may redirect or be
+gone, but a **withdrawn** URL must answer 404 or 410 and must never redirect.
+`tools/preflight.py` step 11 additionally fails the build if a retired page
+reappears in the tree or the sitemap, or if any page links to a withdrawn one.
 
 **Before merging, check** whether any of the six were shared, indexed, or
 printed on a QR code. If one carries real traffic, that changes its destination.
