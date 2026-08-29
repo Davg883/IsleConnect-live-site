@@ -21,12 +21,202 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 # See MEASUREMENT.md.
 EVENTS_ENDPOINT = ""
 
+# ============================================================ site configuration
+
+SITE = {
+    "operator":       "David Grannum, trading as IsleConnect",
+    "operator_short": "IsleConnect",
+    "domain":         "isleconnect.co.uk",
+    "base_url":       "https://www.isleconnect.co.uk",
+    "contact_email":  "hello@isleconnect.co.uk",
+    # Blank until a real handler exists. While blank the contact page offers a
+    # direct email route rather than a form that discards enquiries.
+    "form_endpoint":  "",
+    "legal_reviewed": "18 August 2026",
+}
+
+# ============================================================ content registry
+# One record per story, collection and partner. The renderer reads only these
+# directories. Editorial notes live in `internal:` — a field nothing renders.
+
+try:
+    import yaml
+except ImportError:                                          # pragma: no cover
+    raise SystemExit(
+        "\nThis build needs PyYAML to read content/.\n"
+        "    pip install pyyaml        (or: py -m pip install pyyaml on Windows)\n")
+import glob as _glob
+
+CONTENT = os.path.join(ROOT, "content")
+
+# What may appear on the production domain. `review` is deliberately absent:
+# noindex is a request to search engines, not access control, and a page with
+# rights-pending media must not sit on a public URL at all.
+PUBLISHABLE = {"published"}
+
+REQUIRED_STORY = ["id", "slug", "title", "line", "status", "collections"]
+
+
+def load_registry():
+    reg = {"stories": {}, "collections": {}, "partners": {}}
+    for kind, key in (("stories", "id"), ("collections", "id"), ("partners", "partnerId")):
+        for path in sorted(_glob.glob(os.path.join(CONTENT, kind, "*.yaml"))):
+            rec = yaml.safe_load(open(path, encoding="utf-8"))
+            rec["_path"] = os.path.relpath(path, ROOT)
+            reg[kind][rec[key]] = rec
+    return reg
+
+
+def validate_registry(reg):
+    """Structural gates. Phrase scanning is the safety net; this is the rule."""
+    errs = []
+
+    for sid, st in reg["stories"].items():
+        for field in REQUIRED_STORY:
+            if not st.get(field):
+                errs.append(f"{st['_path']}: missing required field '{field}'")
+        if st.get("status") not in {"draft", "research", "review", "approved",
+                                    "published", "archived", "blocked"}:
+            errs.append(f"{st['_path']}: unknown status {st.get('status')!r}")
+
+        for cid in st.get("collections") or []:
+            if cid not in reg["collections"]:
+                errs.append(f"{st['_path']}: unknown collection {cid!r}")
+
+        # A published story must actually be cleared.
+        if st.get("status") == "published":
+            g = st.get("governance") or {}
+            if g.get("rightsRecord") != "complete":
+                errs.append(f"{st['_path']}: published but rightsRecord is "
+                            f"{g.get('rightsRecord')!r} — rights-pending material "
+                            f"cannot enter production")
+            media = st.get("media") or {}
+            if media and media.get("rights") not in (None, "cleared"):
+                errs.append(f"{st['_path']}: published but media rights are "
+                            f"{media.get('rights')!r}")
+            if not media.get("video"):
+                errs.append(f"{st['_path']}: published with no media")
+
+        # A source-checked mark is a claim; it needs the record behind it.
+        marks_ = st.get("marks") or []
+        if "source" in marks_ and (st.get("governance") or {}).get("editorialReview") != "complete":
+            errs.append(f"{st['_path']}: carries the 'source checked' mark without "
+                        f"a completed editorial review")
+
+        # A nearby partner must exist and be approved, or the block is omitted.
+        np_ = st.get("nearby")
+        if np_ and np_ not in reg["partners"]:
+            errs.append(f"{st['_path']}: unknown partner {np_!r}")
+
+    for pid, pt in reg["partners"].items():
+        ap = pt.get("approval") or {}
+        for flag in ("inclusionApproved", "nameApproved"):
+            if flag not in ap:
+                errs.append(f"{pt['_path']}: approval.{flag} must be stated explicitly")
+        if ap.get("inclusionApproved"):
+            if not ap.get("approvedBy"):
+                errs.append(f"{pt['_path']}: inclusionApproved without approvedBy")
+            if not ap.get("approvedAt"):
+                errs.append(f"{pt['_path']}: inclusionApproved without approvedAt")
+            if not ap.get("nameApproved"):
+                errs.append(f"{pt['_path']}: included but the public name is not approved")
+            if not (pt.get("location") or {}).get("directionsUrl"):
+                errs.append(f"{pt['_path']}: approved for inclusion but no directionsUrl")
+        offer = pt.get("offer") or {}
+        if offer.get("active") and not offer.get("expiresAt"):
+            errs.append(f"{pt['_path']}: an active offer needs an expiry date")
+
+    if errs:
+        print("\nBUILD FAILED — content registry did not validate:\n")
+        for e in errs:
+            print("   " + e)
+        print()
+        raise SystemExit(1)
+    return reg
+
+
+REG = validate_registry(load_registry())
+
+PUBLISHED = {sid: st for sid, st in REG["stories"].items()
+             if st.get("status") in PUBLISHABLE}
+
+# Never typed by hand again.
+LIVE_COUNT = len(PUBLISHED)
+LIVE_COUNT_WORD = {0: "No stories are", 1: "One story is", 2: "Two are",
+                   3: "Three stories are"}.get(LIVE_COUNT, f"{LIVE_COUNT} stories are")
+
+
+def partner_for(story_id):
+    """Return an approved partner record, or None. An unapproved partner is
+    not a warning on the page — the block simply does not exist."""
+    st = REG["stories"].get(story_id) or {}
+    pid = st.get("nearby")
+    if not pid:
+        return None
+    pt = REG["partners"].get(pid) or {}
+    ap = pt.get("approval") or {}
+    if not (ap.get("inclusionApproved") and ap.get("nameApproved")):
+        return None
+    if not (pt.get("location") or {}).get("directionsUrl"):
+        return None
+    return pt
+
+
+# ------------------------------------------------------------ content guard
+# Safety net beneath the structural rules: catches an internal phrase that
+# reaches a page by some route the schema does not cover.
+
+BANNED = [
+    "Copy needed", "Copy and portrait needed", "To be confirmed",
+    "Not wired up", "Content needed before launch", "Wording check needed",
+    "Replace with real numbers", "Confirm before launch", "Check before launch",
+    "Placeholder", "placeholder", "TODO", "FIXME", "Lorem ipsum",
+    "BUILD-SPEC", "ASSET-MANIFEST", "DESIGN-LANGUAGE", "TRAIL-STOPS",
+    "MEASUREMENT.md", "EXPERIENCE-MANIFEST", "site-todo",
+    "before launch", "Illustrative figures", "UNCONFIRMED", "unresolved",
+]
+
+# A banned phrase is permitted only inside an element that explicitly declares
+# itself intentional public copy: <span data-public-note>To be confirmed</span>.
+# Structural, greppable, and impossible to trip by accident in a draft note.
+PUBLIC_NOTE_ATTR = "data-public-note"
+
+
+def guard(paths):
+    import re as _re
+    problems = []
+    for path in paths:
+        full = os.path.join(ROOT, path)
+        if not os.path.exists(full):
+            continue
+        text = open(full, encoding="utf-8").read()
+        # Drop anything the markup declares as deliberate public copy.
+        text = _re.sub(
+            r"<(\w+)[^>]*\b" + PUBLIC_NOTE_ATTR + r"\b[^>]*>.*?</\1>",
+            " ", text, flags=_re.S)
+        visible = _re.sub(r"<!--.*?-->", " ", text, flags=_re.S)
+        visible = _re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", visible, flags=_re.S | _re.I)
+        for phrase in BANNED:
+            if phrase in visible:
+                problems.append("%s  →  %r" % (path, phrase))
+        for leak in _re.findall(r"\{[A-Za-z_][A-Za-z0-9_]*(?:\(\)|\[)[^}]*\}", visible):
+            problems.append("%s  →  unrendered template %r" % (path, leak))
+    if problems:
+        print("\nBUILD FAILED — internal language found on public pages:\n")
+        for pr in problems:
+            print("   " + pr)
+        print("\nMove the note into content/internal/ or a record's `internal:` field.\n")
+        raise SystemExit(1)
+    print("Content guard passed: %d public pages clean." % len(paths))
+
+
+# Collections do not get top-level slots. Two fit; ten would not.
 NAV = [
-    ("explore.html",       "Explore Ryde"),
-    ("ryde-140.html",      "Ryde 140"),
-    ("wartime-trail.html", "Wartime Trail"),
-    ("for-partners.html",  "For Partners"),
-    ("about.html",         "About"),
+    ("explore.html",      "Explore"),
+    ("journeys.html",     "Journeys"),
+    ("for-partners.html", "For Partners"),
+    ("how-we-work.html",  "How We Work"),
+    ("about.html",        "About"),
 ]
 
 FOOTER_COLS = [
@@ -35,9 +225,10 @@ FOOTER_COLS = [
         ("ryde/puckpool-battery.html",      "Puckpool Battery"),
         ("explore.html",                    "All stories"),
     ]),
-    ("Collections", [
-        ("ryde-140.html",      "Ryde 140"),
-        ("wartime-trail.html", "Wartime Trail"),
+    ("Journeys", [
+        ("ryde-140.html",      "Ryde through time"),
+        ("wartime-trail.html", "Ryde to Seaview Wartime Trail"),
+        ("journeys.html",      "All journeys"),
     ]),
     ("For partners", [
         ("partners/venues.html",        "Venues & businesses"),
@@ -46,6 +237,7 @@ FOOTER_COLS = [
     ]),
     ("IsleConnect", [
         ("about.html",         "About"),
+        ("how-we-work.html",   "How we work"),
         ("contact.html",       "Contact"),
         ("privacy.html",       "Privacy"),
         ("accessibility.html", "Accessibility"),
@@ -294,7 +486,7 @@ def routestrip(depth):
         else:
             pips += f"""          <li class="routestrip__stop">
             <span class="routestrip__n">{n}</span>
-            <span class="routestrip__tbc">To be confirmed<span class="visually-hidden">, stop {n}</span></span>
+            <span class="routestrip__tbc" data-public-note>To be confirmed<span class="visually-hidden">, stop {n}</span></span>
           </li>
 """
 
@@ -329,7 +521,11 @@ def video_block(slug, poster, label, note, depth, variant="720"):
 """
 
 
+PUBLIC_PAGES = []
+
+
 def write(path, html):
+    PUBLIC_PAGES.append(path)
     full = os.path.join(ROOT, path)
     d = os.path.dirname(full)
     if d:
@@ -592,7 +788,7 @@ def build_index():
       <div class="band__head">
         <span class="eyebrow">Explore Ryde</span>
         <h2 id="nodes-h">A growing network of stories</h2>
-        <p class="lede">Two are live. The rest are being built with the people who know them.</p>
+        <p class="lede">{LIVE_COUNT_WORD} live. The rest are being built with the people who know them.</p>
       </div>
 
       <div class="stories">
@@ -830,7 +1026,7 @@ def build_ryde140():
     html = head("Ryde 140 — IsleConnect",
                 "A growing collection exploring Ryde's buildings, people and stories across the centuries.", d,
                 page="collection", trail="ryde-140")
-    html += header("ryde-140.html", d, over=True)
+    html += header("journeys.html", d, over=True)
     html += f"""
   <section class="hero hero--short">
     <div class="hero__media" aria-hidden="true">
@@ -857,7 +1053,6 @@ def build_ryde140():
         <p>Ryde is full of frontages that are not the frontages people first walked past, streets that changed use twice over, and businesses whose history is longer than their sign suggests. Ryde 140 collects those stories and puts them back where they happened.</p>
         <p>Each one is built from a documented source, checked by someone who knows the subject, and clearly labelled where an image is an interpretation rather than a record.</p>
       </div>
-      <p class="notice" style="margin-top:var(--space-lg)"><b>Wording check needed.</b> This page deliberately avoids stating what the "140" refers to. Confirm the anniversary and the precise framing before launch — see BUILD-SPEC.md §9.</p>
     </div>
   </section>
 
@@ -924,7 +1119,7 @@ def build_wartime():
     html = head("Ryde to Seaview Wartime Trail — IsleConnect",
                 "A self-guided journey through the places that defended, supplied and lived through the Island's wartime years.", d,
                 page="collection", trail="wartime-trail")
-    html += header("wartime-trail.html", d, over=True)
+    html += header("journeys.html", d, over=True)
     html += f"""
   <section class="hero hero--short">
     <div class="hero__media" aria-hidden="true">
@@ -958,7 +1153,7 @@ def build_wartime():
         <li><span class="facts__k">Terrain</span><span class="facts__v">Surfaced coastal path for most of the route; some uneven ground at the battery</span></li>
         <li><span class="facts__k">Best time</span><span class="facts__v">Daylight, any season. Exposed in a westerly.</span></li>
       </ul>
-      <p class="notice" style="margin-top:var(--space-lg)"><b>Canonical numbering.</b> The Puckpool film states "Stop 7 of 9", so nine stops is the master system — the website, QR codes, films and printed material must all use it. Five stops are not yet named here, and the distance and walking time above are estimates. Confirm the full list before launch.</p>
+      <p class="notice notice--public" style="margin-top:var(--space-lg)"><b>This trail is still being built.</b> One stop is finished and published. The rest are in research, and the walking figures above are our best estimate until the full route is walked and timed. We would rather tell you that than publish a number we cannot stand behind.</p>
     </div>
   </section>
 
@@ -1039,7 +1234,7 @@ def build_story(slug):
                 page="story", story=slug,
                 trail=s["collection_href"].replace(".html", ""),
                 stop=stop_no)
-    html += header(s["collection_href"], d, over=True)
+    html += header("journeys.html", d, over=True)
     transcript = "\n".join(f"          <p>{line}</p>" for line in s.get("transcript", []))
     transcript_block = ""
     if transcript:
@@ -1051,21 +1246,23 @@ def build_story(slug):
       </details>
 """
 
+    # A partner block exists only when a partner record is approved for
+    # inclusion and carries a real directions URL. An unapproved partner is
+    # not a warning on the page — the block simply is not built.
     nearby_block = ""
-    if s.get("nearby"):
-        nb = s["nearby"]
+    pt = partner_for(slug)
+    if pt:
         nearby_block = f"""    <section class="exp-section">
       <span class="eyebrow">Nearby</span>
       <h2>While you are here</h2>
       <div class="nearby">
         <div>
-          <span class="nearby__kind">{nb['kind']}</span>
-          <h3>{nb['name']}</h3>
-          <p>{nb['line']}</p>
+          <span class="nearby__kind">{pt['kind']}</span>
+          <h3>{pt['publicName']}</h3>
+          <p>{pt['copy']['line']}</p>
         </div>
-        <a class="btn btn--ghost-dark" href="{rel('contact.html', d)}" data-ic-event="directions_clicked">Get directions</a>
+        <a class="btn btn--ghost-dark" href="{pt['location']['directionsUrl']}" rel="noopener" data-ic-event="directions_clicked">Get directions</a>
       </div>
-      <p class="notice" style="margin-top:var(--space-md)"><b>Confirm before launch.</b> {nb['name']} appears as a local retail partner on the film's end card. Publish this block only if the agreement is in place — and wire "Get directions" to a real map link.</p>
     </section>
 
 """
@@ -1118,20 +1315,6 @@ def build_story(slug):
     </section>
 
     <section class="exp-section">
-      <span class="eyebrow">Behind the story</span>
-      <h2>Who made this</h2>
-      <div class="contributor">
-        <div class="media media--1x1">
-          <span class="media__spec"><b>portrait-{slug}</b>800 × 800</span>
-        </div>
-        <div>
-          <p>Short biography of the contributor or partner organisation. Two or three sentences — enough to establish who they are and why they know this.</p>
-          <p class="notice"><b>Copy and portrait needed.</b></p>
-        </div>
-      </div>
-    </section>
-
-    <section class="exp-section">
       <span class="eyebrow">Sources</span>
       <h2>Where this comes from</h2>
       <ul class="sources">
@@ -1162,7 +1345,7 @@ def build_soon(slug):
     html = head(f"{title} — IsleConnect", line, d,
                 page="story-in-development", story=slug,
                 trail=coll_href.replace(".html", ""))
-    html += header(coll_href, d)
+    html += header("journeys.html", d)
     html += f"""
   <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
     <div class="wrap">
@@ -1195,6 +1378,159 @@ def build_soon(slug):
     html += footer(d)
     write(f"ryde/{slug}.html", html)
 
+
+def build_journeys():
+    d = 0
+    html = head("Journeys — IsleConnect",
+                "Curated routes and collections across Ryde and the coast to Seaview.", d)
+    html += header("journeys.html", d)
+    html += f"""
+  <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
+    <div class="wrap">
+      <div class="band__head">
+        <span class="eyebrow">Journeys</span>
+        <h1>Stories that belong together</h1>
+        <p class="lede">A single story is worth ten minutes. A journey is worth an afternoon. These are the routes and collections we are building.</p>
+      </div>
+{thread()}
+      <div class="grid grid--2">
+        <div class="audience">
+          <span class="eyebrow">Collection</span>
+          <h3>Ryde through time</h3>
+          <p>A growing collection exploring Ryde's buildings, people and stories across the centuries. Published under the programme name <b>Ryde 140</b>.</p>
+          <a class="link-arrow" href="ryde-140.html">Explore Ryde 140</a>
+        </div>
+        <div class="audience">
+          <span class="eyebrow">Route</span>
+          <h3>Ryde to Seaview Wartime Trail</h3>
+          <p>A self-guided walk along the coast, through the places that defended, supplied and lived through the Island's wartime years. One stop published; the route is still being built.</p>
+          <a class="link-arrow" href="wartime-trail.html">Follow the route</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+{placeband('Ryde', 'Appley', 'Puckpool', 'Seaview')}
+  <section class="band band--ivory-deep">
+    <div class="wrap">
+      <div class="band__head">
+        <span class="eyebrow">In research</span>
+        <h2>What we are working on next</h2>
+        <p class="lede">Journeys we are building with the people who know these places. If you hold records, photographs or first-hand knowledge of any of them, we would like to hear from you.</p>
+      </div>
+      <ol class="beyond-list">
+        <li><h3>Union Street</h3><p>The commercial spine of the town, and what is hiding above the shopfronts.</p></li>
+        <li><h3>The seafront and the pier</h3><p>How arriving at Ryde has changed, and what that did to the town behind it.</p></li>
+        <li><h3>Folklore and the darker side</h3><p>The stories the island tells about itself, mapped to where they are set.</p></li>
+      </ol>
+      <div class="btn-row" style="margin-top:var(--space-lg)">
+        <a class="btn btn--primary" href="contact.html">Get in touch</a>
+      </div>
+    </div>
+  </section>
+"""
+    html += footer(d)
+    write("journeys.html", html)
+
+
+def build_how_we_work():
+    d = 0
+    html = head("How we work — IsleConnect",
+                "What source-linked and human-checked actually mean, story by story.", d)
+    html += header("how-we-work.html", d)
+    html += f"""
+  <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
+    <div class="wrap">
+      <div class="band__head">
+        <span class="eyebrow">How we work</span>
+        <h1>What "human checked" actually means</h1>
+        <p class="lede">It is an easy thing to claim and a hard thing to hold to. So here is exactly what we mean by it, and what each label on a story is promising.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="band band--ivory" style="padding-top:0">
+    <div class="wrap">
+      <div class="band__head">
+        <span class="eyebrow">The marks on every story</span>
+        <h2>Five labels, five specific promises</h2>
+      </div>
+      <ol class="beyond-list">
+        <li>
+          <h3>{marks('archive')}</h3>
+          <p>The material came from a named archive, record office or documented collection, and we can tell you which one. Listed in the story's sources.</p>
+        </li>
+        <li>
+          <h3>{marks('source')}</h3>
+          <p>Every factual claim in the story traces to a source we hold. Where two sources disagree, we say so rather than picking the tidier one.</p>
+        </li>
+        <li>
+          <h3>{marks('recon')}</h3>
+          <p>An image is an interpretation, not a photograph of the past. It is built from documented evidence — an engraving, surviving fabric, measured detail — and labelled on screen wherever it appears. We never present a reconstruction as a record.</p>
+        </li>
+        <li>
+          <h3>{marks('spot')}</h3>
+          <p>The location is exact. You can stand where the story happened, and the practical detail on the page has been checked on the ground.</p>
+        </li>
+        <li>
+          <h3>{marks('oral')}</h3>
+          <p>Someone's first-hand account, recorded with their permission and used on terms they agreed.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="band band--ivory-deep">
+    <div class="wrap">
+      <div class="band__head">
+        <span class="eyebrow">Who checks it</span>
+        <h2>Four different people can say "yes", and they mean different things</h2>
+      </div>
+      <ul class="facts">
+        <li><span class="facts__k">Editorial</span><span class="facts__v">The story reads clearly, and nothing has been overstated for effect.</span></li>
+        <li><span class="facts__k">Local knowledge</span><span class="facts__v">Someone who knows the place confirms it matches what is actually there.</span></li>
+        <li><span class="facts__k">Historical</span><span class="facts__v">A specialist confirms the history and the interpretation are defensible.</span></li>
+        <li><span class="facts__k">Rights</span><span class="facts__v">The rights-holder has agreed to their material being used, on recorded terms.</span></li>
+      </ul>
+      <div class="measure" style="margin-top:var(--space-lg)">
+        <p>A story is only published when the checks it needs have all been made. Where a story has had editorial and local review but not yet a specialist historical review, we say so on the page rather than implying more scrutiny than it has had.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="band band--ivory">
+    <div class="wrap">
+{trust_panel()}    </div>
+  </section>
+
+  <section class="band band--ivory-deep">
+    <div class="wrap">
+      <div class="band__head">
+        <span class="eyebrow">Where AI fits</span>
+        <h2>What the machine does, and what it never does</h2>
+      </div>
+      <div class="measure">
+        <p><b>What it does.</b> It helps us search records faster, draft and redraft, and build visual reconstructions from documented evidence that would otherwise take weeks of illustration.</p>
+        <p><b>What it never does.</b> Decide what is true, sign off a story, or publish anything. A person is responsible for every claim on this site, and if something here is wrong that is a person's mistake, not a machine's.</p>
+        <p>If you think we have got something wrong, <a href="contact.html">tell us</a>. We would rather be corrected than be confidently mistaken.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="closer">
+    <div class="closer__inner">
+      <div class="wrap">
+        <h2>Have something we should know about?</h2>
+        <p>Records, photographs, or the kind of knowledge that only comes from paying attention to one place for thirty years.</p>
+        <div class="btn-row btn-row--centre">
+          <a class="btn btn--primary" href="contact.html">Get in touch</a>
+        </div>
+      </div>
+    </div>
+  </section>
+"""
+    html += footer(d)
+    write("how-we-work.html", html)
 
 def build_partners():
     d = 0
@@ -1251,7 +1587,7 @@ def build_partners():
       <figure class="figure">
         <img src="assets/img/trail-signage.jpg" width="1122" height="1402" loading="lazy" decoding="async"
              alt="Two IsleConnect QR cards in acrylic holders on a caf&eacute; counter: a stop card reading &quot;You are near Stop 5&quot; with a scan code, and a smaller route reward partner card.">
-        <figcaption class="figure__cap"><b>Signage design mockup.</b> The stop number and title shown are placeholder artwork from an earlier draft — the canonical nine-stop list is still being confirmed, and no reward scheme is running yet. What is real is the mechanism: a code on a counter, a story in the browser, and a measurable onward journey.</figcaption>
+        <figcaption class="figure__cap"><b>Signage design mockup.</b> The stop number and title shown are indicative artwork from an earlier draft — the canonical nine-stop list is still being confirmed, and no reward scheme is running yet. What is real is the mechanism: a code on a counter, a story in the browser, and a measurable onward journey.</figcaption>
       </figure>
     </div>
   </section>
@@ -1355,12 +1691,13 @@ def build_partner_page(key):
         <h2>You find out what visitors actually did</h2>
         <p class="lede">Not a dashboard to learn. A short monthly summary of what happened around your venue.</p>
       </div>
-      <div class="stats">
+      <div class="stats stats--example" role="figure" aria-label="Example monthly summary" data-data-status="illustrative">
+        <p class="stats__label">Example monthly summary — Puckpool Battery</p>
         <div class="stat"><b>327</b><span>people discovered this story</span></div>
         <div class="stat"><b>94</b><span>continued to another stop</span></div>
         <div class="stat"><b>36</b><span>requested directions to a nearby venue</span></div>
       </div>
-      <p class="notice" style="margin-top:var(--space-lg)"><b>Illustrative figures.</b> These are an example of the reporting shape, not results. Replace with real numbers once the Ryde pilot has run — or remove this block entirely until then.</p>
+      <p class="stats__note">An example of the report, using made-up numbers. Real figures arrive once your venue is live and people start walking the route.</p>
     </div>
   </section>
 
@@ -1452,10 +1789,14 @@ def build_about():
   <section class="band band--ivory-deep">
     <div class="wrap">
       <div class="band__head">
-        <span class="eyebrow">Who we work with</span>
-        <h2>Historians, venues, authors and the people who keep local knowledge</h2>
+        <span class="eyebrow">Who we are</span>
+        <h2>Historians, artists, venues and the people who keep local knowledge</h2>
       </div>
-      <p class="notice"><b>Copy needed.</b> Three or four sentences on the team and background. Do not name partners you have not agreed in writing.</p>
+      <div class="measure">
+        <p>IsleConnect is being developed in Ryde by David Grannum, bringing together practical business experience, AI production, local research and a growing network of people who understand the Island's places and stories.</p>
+        <p>We work with historians, artists, venues, authors and community organisations. They retain authority over their knowledge and material; IsleConnect helps turn it into an accessible public experience.</p>
+        <p>Artificial intelligence supports research, visualisation and production, but it does not decide what is published. Sources, rights and interpretations remain subject to human review.</p>
+      </div>
     </div>
   </section>
 
@@ -1476,20 +1817,25 @@ def build_about():
     write("about.html", html)
 
 
-def build_contact():
-    d = 0
-    html = head("Contact — IsleConnect", "Tell us about your venue, story or records.", d, page="contact")
-    html += header("", d)
-    html += """
-  <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
-    <div class="wrap">
-      <div class="band__head">
-        <span class="eyebrow">Contact</span>
-        <h1>Start a conversation</h1>
-        <p class="lede">Three questions. That is deliberately all — we would rather talk than read a form.</p>
+def contact_route():
+    """A form that posts nowhere is worse than no form. Until a handler exists,
+    offer the route that actually reaches a person."""
+    e = SITE["contact_email"]
+    if not SITE["form_endpoint"]:
+        return f"""      <div class="nearby" style="max-width:34rem">
+        <div>
+          <span class="nearby__kind">Email us</span>
+          <h3><a href="mailto:{e}">{e}</a></h3>
+          <p>Tell us your name, what you run or hold, and a few sentences about it. We read everything and we reply.</p>
+        </div>
+        <a class="btn btn--primary" href="mailto:{e}?subject=IsleConnect%20enquiry">Write to us</a>
       </div>
 
-      <form class="form" method="post" action="#" novalidate>
+      <div class="measure" style="margin-top:var(--space-xl)">
+        <p>We use what you send us only to reply and to discuss working together. We don't add you to a mailing list and we don't pass your details to anyone else. Our <a href="privacy.html">privacy notice</a> sets out the detail.</p>
+      </div>
+"""
+    return f"""      <form class="form" method="post" action="{SITE['form_endpoint']}">
         <div class="field">
           <label for="name">Your name</label>
           <input id="name" name="name" type="text" autocomplete="name" required>
@@ -1513,11 +1859,25 @@ def build_contact():
           <span class="hint">A few sentences is plenty.</span>
           <textarea id="about" name="about"></textarea>
         </div>
-        <div>
-          <button class="btn btn--primary" type="submit">Send</button>
-        </div>
-        <p class="notice"><b>Not wired up.</b> Connect this to your form handler or inbox before launch, and add the privacy line required by UK GDPR.</p>
+        <p class="hint">We use what you send only to reply and to discuss working together. See our <a href="privacy.html">privacy notice</a>.</p>
+        <div><button class="btn btn--primary" type="submit">Send</button></div>
       </form>
+"""
+
+def build_contact():
+    d = 0
+    html = head("Contact — IsleConnect", "Tell us about your venue, story or records.", d, page="contact")
+    html += header("", d)
+    html += f"""
+  <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
+    <div class="wrap">
+      <div class="band__head">
+        <span class="eyebrow">Contact</span>
+        <h1>Start a conversation</h1>
+        <p class="lede">No form to fill in. Write to us and a person reads it.</p>
+      </div>
+
+{contact_route()}
     </div>
   </section>
 """
@@ -1525,17 +1885,23 @@ def build_contact():
     write("contact.html", html)
 
 
-def build_stub(slug, title, body):
+LEGAL_INTRO = """      <p class="legal-meta">Operated by {operator} · Last reviewed {reviewed}</p>"""
+
+
+def legal_page(slug, title, lede, body_html):
     d = 0
-    html = head(f"{title} — IsleConnect", title, d, page=f"legal-{slug}")
+    html = head(f"{title} — IsleConnect", lede, d)
     html += header("", d)
     html += f"""
   <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
     <div class="wrap">
-      <div class="band__head"><h1>{title}</h1></div>
-      <div class="measure">
-        <p>{body}</p>
-        <p class="notice"><b>Content needed before launch.</b> This page must be written and reviewed — it is a legal requirement, not a nice-to-have.</p>
+      <div class="band__head">
+        <h1>{title}</h1>
+        <p class="lede">{lede}</p>
+      </div>
+      <p class="legal-meta">Operated by {SITE['operator']} · Last reviewed {SITE['legal_reviewed']}</p>
+      <div class="measure legal">
+{body_html}
       </div>
     </div>
   </section>
@@ -1544,11 +1910,160 @@ def build_stub(slug, title, body):
     write(f"{slug}.html", html)
 
 
+def build_privacy():
+    e = SITE["contact_email"]
+    legal_page("privacy", "Privacy",
+        "How IsleConnect collects, uses and stores personal data.",
+        f"""        <h2>Who we are</h2>
+        <p>IsleConnect is a visitor-experience project operated by {SITE['operator']}, based on the Isle of Wight. We are the data controller for the personal data described on this page. We are not connected with any similarly named limited company.</p>
+        <p>You can reach us at <a href="mailto:{e}">{e}</a>.</p>
+
+        <h2>What we collect</h2>
+        <p><b>When you contact us.</b> Your name, email address, what you run or hold, and whatever you choose to write in your message. We use this only to reply to you and to discuss working together.</p>
+        <p><b>When you use the site.</b> We measure how our stories are used — which stories are opened, whether a visitor continues to a second story, and whether directions to a nearby venue are requested. These are counts of events, not profiles of people. We do not use advertising trackers and we do not sell or share data with advertisers.</p>
+        <p>We do not ask for, and have no use for, special category data — health, beliefs, or anything of that kind. Please don't send it to us.</p>
+
+        <h2>Why we are allowed to hold it</h2>
+        <p>For enquiries, our lawful basis is legitimate interests: you have contacted us and expect a reply, and answering you is the whole point. Where we send anything beyond a direct reply, we ask for consent first, and you can withdraw it at any time.</p>
+
+        <h2>How long we keep it</h2>
+        <p>Enquiries are kept for up to two years from the last contact, then deleted. Usage measurement is kept in aggregate only.</p>
+
+        <h2>Who else sees it</h2>
+        <p>Our email and hosting providers process data on our behalf under contract. We do not sell personal data. We do not pass enquiries to partner venues unless you ask us to.</p>
+
+        <h2>Your rights</h2>
+        <p>You can ask us for a copy of what we hold, ask us to correct or delete it, or object to how we use it. Email <a href="mailto:{e}">{e}</a> and we will respond within one month.</p>
+        <p>If you are unhappy with how we have handled your data you can complain to the Information Commissioner's Office at <a href="https://ico.org.uk" rel="noopener">ico.org.uk</a>.</p>
+
+        <h2>Cookies</h2>
+        <p>We do not set advertising or profiling cookies. Where measurement requires storage on your device, it is limited to what is needed to count an event, and you will be asked before any non-essential storage is used.</p>
+
+        <h2>Changes</h2>
+        <p>If this notice changes we will update the review date at the top of the page.</p>""")
+
+
+def build_accessibility():
+    e = SITE["contact_email"]
+    legal_page("accessibility", "Accessibility",
+        "What we have built for access, what we have tested, and what is not good enough yet.",
+        f"""        <p>IsleConnect is used outdoors, on phones, often on uneven ground and in poor weather. Access is not a compliance exercise for us — it decides whether the thing works at all.</p>
+
+        <h2>What the site does</h2>
+        <ul>
+          <li>Every page can be operated by keyboard alone, with a visible focus outline and a skip link to the main content.</li>
+          <li>Text and background colours meet WCAG 2.2 AA contrast throughout.</li>
+          <li>Text resizes without breaking the layout, and the page reflows to a single column on small screens.</li>
+          <li>Every film has a written transcript on the same page.</li>
+          <li>Nothing moves, flashes or plays automatically. Video starts only when you press play.</li>
+          <li>If your device or browser is set to reduce motion, animation is switched off and the content still works.</li>
+          <li>Our press-and-hold reveal can also be operated as a simple on/off toggle, because holding a button is not possible with some assistive technology.</li>
+          <li>Practical access information — steps, uneven ground, step-free routes — is given for every place we send you to.</li>
+        </ul>
+
+        <h2>What is not good enough yet</h2>
+        <ul>
+          <li>Our films have captions burned into the picture rather than selectable caption tracks. Transcripts cover the content, but captions cannot yet be resized or restyled.</li>
+          <li>The site has not yet been tested with a screen reader by someone who uses one daily. We would rather say so than imply otherwise.</li>
+          <li>Some of the places we write about are genuinely difficult to reach. We describe the access honestly rather than pretending otherwise, but we cannot change the ground.</li>
+        </ul>
+
+        <h2>Tell us where it fails</h2>
+        <p>If something here does not work for you, please tell us at <a href="mailto:{e}">{e}</a> and say what you were trying to do. We will reply, and we will say plainly whether and when we can fix it.</p>
+
+        <p>This statement describes the site as built and reviewed on {SITE['legal_reviewed']}. It is an honest self-assessment rather than a third-party audit.</p>""")
+
+
+def build_terms():
+    e = SITE["contact_email"]
+    legal_page("terms", "Terms",
+        "The terms on which IsleConnect content and services are provided.",
+        f"""        <h2>Who provides this site</h2>
+        <p>This site is provided by {SITE['operator']}, Isle of Wight. Contact: <a href="mailto:{e}">{e}</a>.</p>
+
+        <h2>Using the site</h2>
+        <p>You are welcome to read, watch and share our stories, and to follow our trails. Please don't republish our films or text commercially, or present our work as your own, without asking us first.</p>
+
+        <h2>Historical interpretation</h2>
+        <p>Some images on this site are reconstructions — visual interpretations built from documented sources, not photographs of the past. They are labelled as such wherever they appear, and each story lists what it was built from. We work to make them accurate, but an interpretation is not a record, and we will correct anything shown to be wrong.</p>
+
+        <h2>Visiting the places we describe</h2>
+        <p>Our stories point at real locations, many of them outdoors and some of them uneven, exposed or on private land. Opening times and access change. Check before you travel, follow signage, and take responsibility for your own safety. We are not liable for anything that happens on a visit.</p>
+
+        <h2>Other people's rights</h2>
+        <p>Archive material and creative work belonging to others is used with permission and credited. If you believe we have used something we should not have, tell us at <a href="mailto:{e}">{e}</a> and we will take it down while we look into it.</p>
+
+        <h2>Corrections</h2>
+        <p>If you think something here is wrong, please tell us. We would rather be corrected than be confidently mistaken.</p>
+
+        <h2>Liability</h2>
+        <p>We provide this site in good faith and take care over it, but we cannot guarantee it will always be available or error-free. Nothing here excludes liability that cannot lawfully be excluded.</p>
+
+        <h2>Law</h2>
+        <p>These terms are governed by the law of England and Wales.</p>""")
+
+
+def build_info():
+    """A non-sensitive deployment identity, so live verification can tell
+    'the new deploy failed' from 'the new deploy has not arrived yet'.
+    Commit SHA, build time, environment. Nothing else."""
+    import json
+    import datetime
+    import subprocess as _sp
+
+    commit = os.environ.get("VERCEL_GIT_COMMIT_SHA") or os.environ.get("GITHUB_SHA")
+    if not commit:
+        try:
+            commit = _sp.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT,
+                                      stderr=_sp.DEVNULL).decode().strip()
+        except Exception:                                     # noqa: BLE001
+            commit = "unknown"
+
+    write("build-info.json", json.dumps({
+        "commit": commit,
+        "builtAt": datetime.datetime.now(datetime.timezone.utc)
+                   .replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "environment": os.environ.get("IC_ENVIRONMENT", "production"),
+        "publishedStories": LIVE_COUNT,
+    }, indent=2) + "\n")
+    PUBLIC_PAGES.remove("build-info.json")
+
+
+def build_sitemap_and_robots():
+    """Generated from the pages actually written — a review-state page cannot
+    end up in here by accident."""
+    base = SITE["base_url"].rstrip("/")
+    urls = "".join(
+        "  <url><loc>%s/%s</loc></url>\n" % (base, path.replace("index.html", ""))
+        for path in sorted(PUBLIC_PAGES))
+    write("sitemap.xml",
+          '<?xml version="1.0" encoding="UTF-8"?>\n'
+          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+          + urls + "</urlset>\n")
+    PUBLIC_PAGES.remove("sitemap.xml")
+
+    write("robots.txt",
+          "User-agent: *\n"
+          "Disallow: /review/\n"
+          "Allow: /\n\n"
+          "Sitemap: %s/sitemap.xml\n" % base)
+    PUBLIC_PAGES.remove("robots.txt")
+
+
+
+SOON_SLUGS = set('ryde/' + k for k in SOON)
+
 # ============================================================ run
 
 if __name__ == "__main__":
+    print("Registry: %d stories (%d published), %d collections, %d partners"
+          % (len(REG["stories"]), LIVE_COUNT,
+             len(REG["collections"]), len(REG["partners"])))
+
     build_index()
     build_explore()
+    build_journeys()
+    build_how_we_work()
     build_ryde140()
     build_wartime()
     for slug in STORIES:
@@ -1560,10 +2075,19 @@ if __name__ == "__main__":
         build_partner_page(key)
     build_about()
     build_contact()
-    build_stub("privacy", "Privacy",
-               "How IsleConnect collects, uses and stores personal data, written to meet UK GDPR.")
-    build_stub("accessibility", "Accessibility",
-               "How IsleConnect works for people with access needs, what we have tested, and what we know is not yet good enough. This matters more than usual for a product used outdoors, on phones, on uneven ground.")
-    build_stub("terms", "Terms",
-               "The terms under which IsleConnect content and services are provided.")
+    build_privacy()
+    build_accessibility()
+    build_terms()
+    build_sitemap_and_robots()
+    build_info()
+
+    # Nothing in a non-publishable state may have produced a page.
+    blocked = [st["slug"] + ".html" for st in REG["stories"].values()
+               if st.get("status") not in PUBLISHABLE]
+    leaked = [b for b in blocked if b in PUBLIC_PAGES and b.replace(".html", "") not in SOON_SLUGS]
+    if leaked:
+        print("\nBUILD FAILED — non-published records produced pages:", leaked)
+        raise SystemExit(1)
+
+    guard(PUBLIC_PAGES)
     print("\nDone.")

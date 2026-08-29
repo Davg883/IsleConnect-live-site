@@ -1,0 +1,23 @@
+partnerId: the-dell-cafe
+publicName: The Dell Cafe
+kind: Café
+# Appears as "local retail partner" on the Puckpool film's end card.
+# Until inclusionApproved is true the renderer omits the entire Nearby block.
+status: pending
+approval:
+  inclusionApproved: false
+  nameApproved: false
+  approvedBy: null
+  approvedAt: null
+location:
+  directionsUrl: null
+offer:
+  active: false
+  expiresAt: null
+copy:
+  line: Continue your walk with food and refreshments nearby.
+internal:
+  note: >
+    Permission unresolved. Named on the film end card but no agreement on
+    file. Nothing publishes until the business has agreed the wording and a
+    real directions URL exists.

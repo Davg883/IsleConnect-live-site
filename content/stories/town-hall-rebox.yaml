@@ -1,0 +1,35 @@
+id: town-hall-rebox
+slug: ryde/town-hall-rebox
+title: Ryde Is Calling
+line: A telephone box. A Town Hall. Nearly two centuries of change.
+subtitle: A Town Hall, a telephone box and nearly two centuries of change.
+status: blocked
+blockedBy:
+  - film picture and sound approval
+  - artwork permission and reproduction wording (Julie Gayle Balliu, Out of Order)
+  - location approval (Re:Box / Town Hall)
+  - historical review of the seven timeline beats
+  - complete rights record
+collections: [ryde-140]
+location:
+  name: "Re:Box, Lind Street"
+  town: Ryde
+marks: []
+media:
+  video: null
+  poster: null
+  rights: pending
+thenNow: null
+governance:
+  editorialReview: pending
+  localReview: pending
+  historicalReview: pending
+  rightsRecord: pending
+  lastReviewed: null
+journey:
+  next: [royal-victoria-arcade]
+nearby: null
+truth:
+  real: [present-day Re:Box photography, Out of Order artwork]
+  interpreted: [historical visualisations]
+  conceptual: [future civic gathering]

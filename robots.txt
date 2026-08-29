@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /review/
+Allow: /
+
+Sitemap: https://www.isleconnect.co.uk/sitemap.xml

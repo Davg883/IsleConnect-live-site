@@ -1,0 +1,50 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "python3 tools/build-info.py",
+  "outputDirectory": ".",
+  "cleanUrls": false,
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/for-venues.html",
+      "destination": "/partners/venues.html",
+      "permanent": true
+    },
+    {
+      "source": "/for-creators.html",
+      "destination": "/partners/creators.html",
+      "permanent": true
+    },
+    {
+      "source": "/work-with-us.html",
+      "destination": "/for-partners.html",
+      "permanent": true
+    },
+    {
+      "source": "/explore/the-garlic-farm.html",
+      "destination": "/explore.html",
+      "permanent": false
+    },
+    {
+      "source": "/explore/darker-side-of-wight.html",
+      "destination": "/explore.html",
+      "permanent": false
+    },
+    {
+      "source": "/explore/bembridge-fort.html",
+      "destination": "/explore.html",
+      "permanent": false
+    }
+  ],
+  "headers": [
+    {
+      "source": "/build-info.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    }
+  ]
+}

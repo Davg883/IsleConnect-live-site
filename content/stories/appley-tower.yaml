@@ -1,0 +1,18 @@
+id: appley-tower
+slug: ryde/appley-tower
+title: Appley Tower
+line: You've walked past Appley Tower. Now find out what you've been looking at.
+status: research
+collections: [wartime-trail]
+marks: []
+media: null
+thenNow: null
+governance:
+  editorialReview: pending
+  localReview: pending
+  historicalReview: pending
+  rightsRecord: pending
+  lastReviewed: null
+journey:
+  next: []
+nearby: null
