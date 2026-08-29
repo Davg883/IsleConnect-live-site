@@ -29,7 +29,7 @@ SITE = {
     "operator_short": "IsleConnect",
     "domain":         "isleconnect.co.uk",
     "base_url":       "https://www.isleconnect.co.uk",
-    "contact_email":  "hello@isleconnect.co.uk",
+    "contact_email":  "david@isleconnect.co.uk",
     # Blank until a real handler exists. While blank the contact page offers a
     # direct email route rather than a form that discards enquiries.
     "form_endpoint":  "",

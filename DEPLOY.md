@@ -155,7 +155,7 @@ arrived yet. Those are different things and the script says which.
 10. Push to `main`.
 11. Open the production domain and look at it — not the local preview.
 12. `python3 tools/verify-live.py`.
-13. Send one controlled test to `hello@isleconnect.co.uk`.
+13. Send one controlled test to `david@isleconnect.co.uk`.
 14. Confirm it arrives (check Gmail **and** Outlook, and the spam folder) and
     that nothing sensitive is written to any log.
 15. Record the version and date below.

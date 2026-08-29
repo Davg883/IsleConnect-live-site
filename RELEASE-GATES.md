@@ -6,7 +6,8 @@ recorded here, before this reaches production.
 
 ## 1 · Mailbox
 
-Eight public pages point at `hello@isleconnect.co.uk` the moment this merges.
+Four public pages point at `david@isleconnect.co.uk` the moment this merges:
+Contact, Privacy, Accessibility and Terms.
 
 - [ ] Mailbox exists
 - [ ] Incoming mail confirmed by test

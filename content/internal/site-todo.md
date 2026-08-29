@@ -5,7 +5,7 @@ The build reads `content/stories`, `content/collections`, `content/partners` and
 or in the `internal:` field of a record — a field the renderer does not read.
 
 ## Before deployment
-1. Create and monitor hello@isleconnect.co.uk (SPF, DKIM, DMARC; test to Gmail and Outlook).
+1. Create and monitor david@isleconnect.co.uk (SPF, DKIM, DMARC; test to Gmail and Outlook).
 2. Read and approve privacy.html, accessibility.html, terms.html.
 3. Approve the About copy.
 4. Decide on The Dell Cafe — the Nearby block stays omitted until inclusionApproved is true.

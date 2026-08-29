@@ -223,10 +223,10 @@ if FAIL:
 
 print(f"\nPREFLIGHT PASSED — {len(pages)} public pages, "
       f"{B.LIVE_COUNT} published stories, {len(WARN)} warning(s).")
-print("""
+print(f"""
   This proves the repository is internally consistent. It does NOT prove:
 
-    · hello@isleconnect.co.uk exists, is monitored, and passes SPF/DKIM/DMARC
+    · {B.SITE['contact_email']} exists, is monitored, and passes SPF/DKIM/DMARC
     · the legal pages have been read and approved by a person
     · the six retired URLs have been checked for traffic, indexing and QR codes
 
