@@ -53,18 +53,29 @@ B.guard(pages)
 
 # 3 · every story and partner record is in a known state
 for sid, st in B.REG["stories"].items():
-    if st.get("status") not in {"draft", "research", "review", "approved",
-                                "published", "archived", "blocked"}:
+    if st.get("status") not in B.STATUSES:
         fail("3 states", f"{sid}: unknown status {st.get('status')!r}")
 
 
-# 4 · nothing non-published produced a page
+# 4 · what is on disk matches what each record's status permits
+# Permission comes from the status, not from membership of any list:
+#   published → a full story page   research → the reduced page   else → none
 for sid, st in B.REG["stories"].items():
-    if st.get("status") in B.PUBLISHABLE:
-        continue
     candidate = st["slug"] + ".html"
-    if candidate in pages and candidate.replace(".html", "") not in B.SOON_SLUGS:
-        fail("4 states", f"{sid} is {st['status']} but produced {candidate}")
+    on_disk = candidate in pages
+    status = st.get("status")
+    if status in B.RENDERABLE:
+        if not on_disk:
+            fail("4 states", f"{sid} is {status} and should have produced "
+                             f"{candidate}, which is missing")
+        elif status in B.RENDER_REDUCED:
+            body = open(os.path.join(ROOT, candidate), encoding="utf-8").read()
+            if 'page="story-in-development"' not in body:
+                fail("4 states", f"{sid} is {status} but {candidate} is not the "
+                                 f"reduced 'in development' page")
+    elif on_disk:
+        fail("4 states", f"{sid} is {status} but produced {candidate}")
+
 if glob.glob(os.path.join(ROOT, "review", "*.html")):
     fail("4 states", "review/ exists in the production tree — review material "
                      "must never reach the public domain, noindex or not")
@@ -114,10 +125,22 @@ missing = set()
 for page in pages:
     d = os.path.dirname(page)
     body = open(os.path.join(ROOT, page), encoding="utf-8").read()
-    for url in re.findall(r'(?:href|src)="([^"#][^"]*)"', body):
-        if url.startswith(("http", "mailto:", "#", "data:")):
+    for url in re.findall(r'(?:href|src)="([^"]*)"', body):
+        url = url.strip()
+        # In-page, or not a repository path at all. A protocol-relative URL
+        # (//fonts.example/x.css) is external too — it is not a local file, and
+        # a startswith("http") test misses it.
+        if (not url or url.startswith("#") or url.startswith("//")
+                or re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", url)):
             continue
-        target = os.path.normpath(os.path.join(ROOT, d, url.split("#")[0]))
+        # A fragment and a query string both address the same file on disk.
+        path_part = url.split("#", 1)[0].split("?", 1)[0]
+        if not path_part:
+            continue
+        base = ROOT if path_part.startswith("/") else os.path.join(ROOT, d)
+        target = os.path.normpath(os.path.join(base, path_part.lstrip("/")))
+        if os.path.isdir(target):                 # a directory link resolves
+            target = os.path.join(target, "index.html")   # through its index
         if not os.path.exists(target):
             missing.add(f"{page} → {url}")
 for m in sorted(missing):
@@ -136,6 +159,51 @@ for page in pages:
             fail("9 video", f"{page}: autoplay without muted")
     if "<video" in body and "transcript" not in body.lower():
         warn("9 video", f"{page}: video present with no transcript on the page")
+
+
+# 10 · the standing editorial rules that are mechanically checkable
+# CLAUDE.md lists rules that "must not break". The ones a script can actually
+# test are tested here rather than trusted to memory.
+
+# Navigation is five items, in this order.
+EXPECTED_NAV = ["Explore", "Journeys", "For Partners", "How We Work", "About"]
+actual_nav = [label for _href, label in B.NAV]
+if actual_nav != EXPECTED_NAV:
+    fail("10 rules", f"navigation is {actual_nav}, expected {EXPECTED_NAV}")
+
+# Vectis ONE appears exactly once per page, and is never a link.
+for page in pages:
+    body = open(os.path.join(ROOT, page), encoding="utf-8").read()
+    n = body.count("Vectis ONE")
+    if n != 1:
+        fail("10 rules", f"{page}: 'Vectis ONE' appears {n} times, expected once")
+    for anchor in re.findall(r"<a\b[^>]*>.*?</a>", body, re.S):
+        if "Vectis ONE" in anchor:
+            fail("10 rules", f"{page}: 'Vectis ONE' is inside a link; it must be unlinked")
+
+# AI is claimed once on the homepage, in the trust panel, in a sentence whose
+# subject is human responsibility.
+#
+# Provenance captions are exempt and are stripped first. "Evidence-led AI
+# reconstruction" on a film is a required disclosure — the site's own rule is
+# that a reconstruction is labelled wherever it appears — not a claim about the
+# product. Counting it would set the labelling rule against the marketing rule
+# and force one of them to be broken.
+home = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+home_text = re.sub(r"<(script|style)\b[^>]*>.*?</\1>", " ", home, flags=re.S | re.I)
+home_text = re.sub(r'<p class="video__caption">.*?</p>', " ", home_text, flags=re.S)
+home_text = re.sub(r"<[^>]+>", " ", home_text)
+ai_hits = re.findall(r"(?<![A-Za-z])AI(?![A-Za-z])", home_text)
+if len(ai_hits) != 1:
+    fail("10 rules", f"homepage claims AI {len(ai_hits)} times outside provenance "
+                     f"captions, expected once (in the trust panel, in a sentence "
+                     f"whose subject is human responsibility)")
+
+# The operator is named unambiguously, and never as the unrelated company.
+for page in pages:
+    body = open(os.path.join(ROOT, page), encoding="utf-8").read()
+    if re.search(r"ISLE\s+CONNECT\s+LTD", body, re.I) and "not connected" not in body.lower():
+        fail("10 rules", f"{page}: names ISLE CONNECT LTD without disclaiming it")
 
 
 # ------------------------------------------------------------------ report

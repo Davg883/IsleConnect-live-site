@@ -21,27 +21,49 @@ committed-output check would be meaningless.
 It is generated at deploy time. `vercel.json` sets:
 
 ```
-buildCommand: python3 tools/build-info.py
+buildCommand: pip install -r requirements.txt && python3 tools/build-info.py
 outputDirectory: .
 ```
 
-`tools/build-info.py` uses the standard library only. It writes the identity
-file and nothing else — **it does not rebuild the site**. That was deliberate:
+`tools/build-info.py` is the **only** implementation of `build-info.json`.
+`build.py` calls this script rather than carrying its own copy: two
+implementations with different defaults is precisely how a preview deployment
+could come to describe itself as production.
 
-- a deploy cannot fail on a missing Python package
+It writes the identity file and nothing else — **it does not rebuild the
+site**. That is deliberate:
+
 - the HTML that ships is exactly the HTML reviewed in the pull request, not a
   rebuild that might differ from it
-- `VERCEL_ENV` decides the `environment` field, so a preview deployment can
-  never describe itself as production
+- `VERCEL_ENV` decides the `environment` field, and anything unrecognised falls
+  back to `preview`. Production is never inferred — the platform has to state
+  it, so a preview cannot claim to be live.
+- `publishedStories` is parsed from the YAML records. It is not pattern-matched
+  out of the file text, which would miss a record whose status carries a
+  trailing comment and would happily count one that does not parse at all.
+
+Parsing needs PyYAML, so the build command installs `requirements.txt` first.
+A malformed record now fails the deploy instead of silently producing a wrong
+count.
 
 The committed HTML staying authoritative is what the `checks.yml` drift test
 enforces: if the records and the committed pages disagree, CI fails on the
-branch, before anything deploys.
+branch, before anything deploys. That test reports newly generated but
+uncommitted pages as well as changed and deleted ones — a new page that was
+never committed would otherwise deploy while CI stayed green.
 
 > **Fallback.** If the build step fails on the preview for any reason, remove
 > `buildCommand` and `outputDirectory` from `vercel.json`. The site serves the
-> committed HTML exactly as before, `/build-info.json` is simply absent, and
-> `verify-live.py` says so and falls back to content-only checks.
+> committed HTML exactly as before and `/build-info.json` is simply absent.
+> Verification then has to be told that this is deliberate:
+>
+> ```
+> python3 tools/verify-live.py --no-build-identity
+> ```
+>
+> Without that flag a missing `/build-info.json` is treated as a failure,
+> because an unannounced missing identity file almost always means the build
+> command did not run.
 
 ## Once, before the first run
 
@@ -71,11 +93,6 @@ python3 tools/verify-live.py --expect HEAD --wait 600
 being served, so it can tell "the deploy failed" from "the deploy has not
 arrived yet". Without it the check races Vercel and fails a good build.
 
-`.github/workflows/publish.yml` runs both automatically on every push to `main`
-and fails the run rather than warning. It also checks that the committed HTML
-matches what the content records currently produce, so the repository cannot
-drift from the registry the way it has until now.
-
 ### Two workflows, deliberately separate
 
 `.github/workflows/checks.yml` — runs on every push and pull request. Registry
@@ -100,12 +117,13 @@ via *Run workflow*. It confirms the deployed commit first, then checks content.
 | 1 | Production build succeeds — registry validation and content guard included |
 | 2 | No prohibited phrase on any generated page |
 | 3 | Every story and partner record is in a known state |
-| 4 | No `draft`, `research`, `review`, `approved` or `blocked` record produced a page, and `review/` does not exist in the tree |
+| 4 | Every record produced exactly what its status permits — `published` a full page, `research` the reduced "in development" page, everything else nothing at all — and `review/` does not exist in the tree |
 | 5 | Privacy, Accessibility and Terms contain real content, not stubs |
 | 6 | A contact address is configured and appears on the site |
 | 7 | The contact form is either genuinely connected or not rendered at all |
 | 8 | Every internal link and asset resolves |
 | 9 | Every video has controls and a poster, and no autoplay with sound |
+| 10 | The mechanical editorial rules from `CLAUDE.md`: five navigation items in order, Vectis ONE once per page and unlinked, AI claimed once on the homepage outside provenance captions, and the operator never confused with ISLE CONNECT LTD |
 
 ### What verify-live checks
 
@@ -122,8 +140,8 @@ Exit codes: `0` verified · `1` a real failure · `2` the deployment has not
 arrived yet. Those are different things and the script says which.
 
 > **Note:** it needs outbound network access. It runs in CI and on your machine.
-> It cannot run from the Claude sandbox, which blocks egress — which is why the
-> live checks in this conversation were done by fetching pages directly.
+> An environment without outbound access cannot run it at all; verify from a
+> machine or a CI runner that can reach the public internet.
 
 ---
 

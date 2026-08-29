@@ -11,6 +11,7 @@ Writes every page including index.html.
 """
 
 import os
+import sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 
@@ -49,21 +50,78 @@ import glob as _glob
 
 CONTENT = os.path.join(ROOT, "content")
 
-# What may appear on the production domain. `review` is deliberately absent:
-# noindex is a request to search engines, not access control, and a page with
-# rights-pending media must not sit on a public URL at all.
+# What may appear on the production domain, and in what form. Publication
+# permission comes from the record's status and from nothing else — never from
+# membership of a dictionary in this file.
+#
+#   published   a complete public story page
+#   research    the reduced public "in development" page, and nothing more
+#   everything else — draft, review, approved, blocked, archived — no page
+#
+# `review` is deliberately not "publish with noindex": noindex is a request to
+# search engines, not access control, and a page with rights-pending media must
+# not sit on a public URL at all.
+STATUSES = {"draft", "research", "review", "approved",
+            "published", "archived", "blocked"}
 PUBLISHABLE = {"published"}
+RENDER_FULL = {"published"}
+RENDER_REDUCED = {"research"}
+RENDERABLE = RENDER_FULL | RENDER_REDUCED
+
+# The site is 21 public pages. If that changes, it changes because someone
+# decided it should — not because a status was edited without anyone noticing.
+EXPECTED_PUBLIC_PAGES = 21
 
 REQUIRED_STORY = ["id", "slug", "title", "line", "status", "collections"]
 
 
 def load_registry():
+    """Read content/. A duplicate id or slug is an error, never a silent
+    overwrite — the record that lost would vanish without a trace."""
     reg = {"stories": {}, "collections": {}, "partners": {}}
+    errs = []
     for kind, key in (("stories", "id"), ("collections", "id"), ("partners", "partnerId")):
+        seen_slugs = {}
         for path in sorted(_glob.glob(os.path.join(CONTENT, kind, "*.yaml"))):
-            rec = yaml.safe_load(open(path, encoding="utf-8"))
-            rec["_path"] = os.path.relpath(path, ROOT)
-            reg[kind][rec[key]] = rec
+            where = os.path.relpath(path, ROOT)
+            try:
+                rec = yaml.safe_load(open(path, encoding="utf-8"))
+            except yaml.YAMLError as e:                       # noqa: PERF203
+                errs.append(f"{where}: is not valid YAML — {e}")
+                continue
+            if rec is None:
+                errs.append(f"{where}: is empty — every record file must "
+                            f"contain one record, or be deleted")
+                continue
+            if not isinstance(rec, dict):
+                errs.append(f"{where}: must be a mapping, got {type(rec).__name__}")
+                continue
+            if not rec.get(key):
+                errs.append(f"{where}: missing the required '{key}' field, so "
+                            f"the record cannot be identified")
+                continue
+
+            rec["_path"] = where
+            ident = rec[key]
+            if ident in reg[kind]:
+                errs.append(f"{where}: duplicate {key} {ident!r}, already declared "
+                            f"in {reg[kind][ident]['_path']}")
+                continue
+            slug = rec.get("slug")
+            if slug:
+                if slug in seen_slugs:
+                    errs.append(f"{where}: duplicate slug {slug!r}, already used "
+                                f"by {seen_slugs[slug]}")
+                    continue
+                seen_slugs[slug] = where
+            reg[kind][ident] = rec
+
+    if errs:
+        print("\nBUILD FAILED — content registry could not be loaded:\n")
+        for e in errs:
+            print("   " + e)
+        print()
+        raise SystemExit(1)
     return reg
 
 
@@ -75,8 +133,7 @@ def validate_registry(reg):
         for field in REQUIRED_STORY:
             if not st.get(field):
                 errs.append(f"{st['_path']}: missing required field '{field}'")
-        if st.get("status") not in {"draft", "research", "review", "approved",
-                                    "published", "archived", "blocked"}:
+        if st.get("status") not in STATUSES:
             errs.append(f"{st['_path']}: unknown status {st.get('status')!r}")
 
         for cid in st.get("collections") or []:
@@ -91,11 +148,14 @@ def validate_registry(reg):
                             f"{g.get('rightsRecord')!r} — rights-pending material "
                             f"cannot enter production")
             media = st.get("media") or {}
-            if media and media.get("rights") not in (None, "cleared"):
-                errs.append(f"{st['_path']}: published but media rights are "
-                            f"{media.get('rights')!r}")
             if not media.get("video"):
                 errs.append(f"{st['_path']}: published with no media")
+            # Stated explicitly, every time. An absent `rights` key is not
+            # consent — it is a record nobody has completed.
+            if media.get("rights") != "cleared":
+                errs.append(f"{st['_path']}: published but media rights are "
+                            f"{media.get('rights')!r} — every published story "
+                            f"needs media.rights: cleared, stated explicitly")
 
         # A source-checked mark is a claim; it needs the record behind it.
         marks_ = st.get("marks") or []
@@ -146,10 +206,35 @@ LIVE_COUNT_WORD = {0: "No stories are", 1: "One story is", 2: "Two are",
                    3: "Three stories are"}.get(LIVE_COUNT, f"{LIVE_COUNT} stories are")
 
 
-def partner_for(story_id):
+# Records are addressed by their declared `slug` field. id and slug are
+# different things and are not assumed to be interchangeable.
+BY_SLUG = {st["slug"]: st for st in REG["stories"].values()}
+
+# The renderers address a story by a short key ("puckpool-battery"); the record
+# declares a full page slug ("ryde/puckpool-battery"). Derive the mapping from
+# the declared slug rather than from the id, which is a separate field that is
+# only incidentally similar. validate_render_sources() proves the two sets
+# agree, so a divergence is an error rather than a silently missing block.
+RENDER_KEY_TO_SLUG = {}
+for _st in REG["stories"].values():
+    RENDER_KEY_TO_SLUG.setdefault(_st["slug"].rsplit("/", 1)[-1], _st["slug"])
+
+
+def page_slug_for(render_key):
+    """The declared slug of the record a renderer key belongs to."""
+    return RENDER_KEY_TO_SLUG.get(render_key, render_key)
+
+
+def story_record(page_slug):
+    """The registry record that owns a rendered page, resolved by the record's
+    declared `slug` — never by assuming the id and the slug are the same."""
+    return BY_SLUG.get(page_slug)
+
+
+def partner_for(page_slug):
     """Return an approved partner record, or None. An unapproved partner is
     not a warning on the page — the block simply does not exist."""
-    st = REG["stories"].get(story_id) or {}
+    st = story_record(page_slug) or {}
     pid = st.get("nearby")
     if not pid:
         return None
@@ -165,42 +250,26 @@ def partner_for(story_id):
 # ------------------------------------------------------------ content guard
 # Safety net beneath the structural rules: catches an internal phrase that
 # reaches a page by some route the schema does not cover.
+#
+# The policy itself lives in tools/content_policy.py so that the build guard
+# and tools/verify-live.py enforce one list rather than two that drift apart.
+# A banned phrase is permitted only inside an element that declares itself
+# intentional public copy: <span data-public-note>To be confirmed</span>.
 
-BANNED = [
-    "Copy needed", "Copy and portrait needed", "To be confirmed",
-    "Not wired up", "Content needed before launch", "Wording check needed",
-    "Replace with real numbers", "Confirm before launch", "Check before launch",
-    "Placeholder", "placeholder", "TODO", "FIXME", "Lorem ipsum",
-    "BUILD-SPEC", "ASSET-MANIFEST", "DESIGN-LANGUAGE", "TRAIL-STOPS",
-    "MEASUREMENT.md", "EXPERIENCE-MANIFEST", "site-todo",
-    "before launch", "Illustrative figures", "UNCONFIRMED", "unresolved",
-]
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+import content_policy as _policy                              # noqa: E402
 
-# A banned phrase is permitted only inside an element that explicitly declares
-# itself intentional public copy: <span data-public-note>To be confirmed</span>.
-# Structural, greppable, and impossible to trip by accident in a draft note.
-PUBLIC_NOTE_ATTR = "data-public-note"
+BANNED = _policy.BANNED_PHRASES
+PUBLIC_NOTE_ATTR = _policy.PUBLIC_NOTE_ATTR
 
 
 def guard(paths):
-    import re as _re
     problems = []
     for path in paths:
         full = os.path.join(ROOT, path)
         if not os.path.exists(full):
             continue
-        text = open(full, encoding="utf-8").read()
-        # Drop anything the markup declares as deliberate public copy.
-        text = _re.sub(
-            r"<(\w+)[^>]*\b" + PUBLIC_NOTE_ATTR + r"\b[^>]*>.*?</\1>",
-            " ", text, flags=_re.S)
-        visible = _re.sub(r"<!--.*?-->", " ", text, flags=_re.S)
-        visible = _re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", visible, flags=_re.S | _re.I)
-        for phrase in BANNED:
-            if phrase in visible:
-                problems.append("%s  →  %r" % (path, phrase))
-        for leak in _re.findall(r"\{[A-Za-z_][A-Za-z0-9_]*(?:\(\)|\[)[^}]*\}", visible):
-            problems.append("%s  →  unrendered template %r" % (path, leak))
+        problems += _policy.scan(open(full, encoding="utf-8").read(), path)
     if problems:
         print("\nBUILD FAILED — internal language found on public pages:\n")
         for pr in problems:
@@ -246,7 +315,7 @@ FOOTER_COLS = [
 ]
 
 TRUST_BODY = ("We use source-linked local knowledge and work with the people who know "
-              "the story or place. AI helps us create richer experiences faster, but "
+              "the story or place. AI helps us research and build these stories faster, but "
               "people remain responsible for what gets published.")
 
 
@@ -1250,7 +1319,7 @@ def build_story(slug):
     # inclusion and carries a real directions URL. An unapproved partner is
     # not a warning on the page — the block simply is not built.
     nearby_block = ""
-    pt = partner_for(slug)
+    pt = partner_for(page_slug_for(slug))
     if pt:
         nearby_block = f"""    <section class="exp-section">
       <span class="eyebrow">Nearby</span>
@@ -1920,14 +1989,15 @@ def build_privacy():
 
         <h2>What we collect</h2>
         <p><b>When you contact us.</b> Your name, email address, what you run or hold, and whatever you choose to write in your message. We use this only to reply to you and to discuss working together.</p>
-        <p><b>When you use the site.</b> We measure how our stories are used — which stories are opened, whether a visitor continues to a second story, and whether directions to a nearby venue are requested. These are counts of events, not profiles of people. We do not use advertising trackers and we do not sell or share data with advertisers.</p>
+        <p><b>When you use the site.</b> At present, nothing. No usage or analytics data is sent anywhere, because we have not switched any measurement on: the site carries no advertising trackers, no third-party analytics, and no profiling cookies, and it transmits no record of the pages you open.</p>
+        <p>We intend to measure how our stories are used — which stories are opened, whether a visitor continues to a second one, whether directions to a nearby venue are requested. Those would be counts of events, not profiles of people. None of it is happening yet, and we will update this notice before it does rather than afterwards.</p>
         <p>We do not ask for, and have no use for, special category data — health, beliefs, or anything of that kind. Please don't send it to us.</p>
 
         <h2>Why we are allowed to hold it</h2>
         <p>For enquiries, our lawful basis is legitimate interests: you have contacted us and expect a reply, and answering you is the whole point. Where we send anything beyond a direct reply, we ask for consent first, and you can withdraw it at any time.</p>
 
         <h2>How long we keep it</h2>
-        <p>Enquiries are kept for up to two years from the last contact, then deleted. Usage measurement is kept in aggregate only.</p>
+        <p>Enquiries are kept for up to two years from the last contact, then deleted. There is currently no usage measurement to retain.</p>
 
         <h2>Who else sees it</h2>
         <p>Our email and hosting providers process data on our behalf under contract. We do not sell personal data. We do not pass enquiries to partner venues unless you ask us to.</p>
@@ -1937,7 +2007,7 @@ def build_privacy():
         <p>If you are unhappy with how we have handled your data you can complain to the Information Commissioner's Office at <a href="https://ico.org.uk" rel="noopener">ico.org.uk</a>.</p>
 
         <h2>Cookies</h2>
-        <p>We do not set advertising or profiling cookies. Where measurement requires storage on your device, it is limited to what is needed to count an event, and you will be asked before any non-essential storage is used.</p>
+        <p>This site sets no cookies and writes nothing to your device. If that changes, we will ask you before any non-essential storage is used, and this notice will say so first.</p>
 
         <h2>Changes</h2>
         <p>If this notice changes we will update the review date at the top of the page.</p>""")
@@ -1949,10 +2019,11 @@ def build_accessibility():
         "What we have built for access, what we have tested, and what is not good enough yet.",
         f"""        <p>IsleConnect is used outdoors, on phones, often on uneven ground and in poor weather. Access is not a compliance exercise for us — it decides whether the thing works at all.</p>
 
-        <h2>What the site does</h2>
+        <h2>What we have built for access</h2>
+        <p>This is a description of what we have built and what we have checked. It is not a conformance statement: the site has not been audited against WCAG 2.2, by us or by anyone else, and we do not claim it meets that standard.</p>
         <ul>
-          <li>Every page can be operated by keyboard alone, with a visible focus outline and a skip link to the main content.</li>
-          <li>Text and background colours meet WCAG 2.2 AA contrast throughout.</li>
+          <li>Every page is built to be operated by keyboard alone, with a visible focus outline and a skip link to the main content. We have walked the main routes this way; we have not exhaustively tested every control.</li>
+          <li>Text and background colours were chosen against the WCAG 2.2 AA contrast ratios, and we have checked the main text and interface colours. The full palette has not been independently verified.</li>
           <li>Text resizes without breaking the layout, and the page reflows to a single column on small screens.</li>
           <li>Every film has a written transcript on the same page.</li>
           <li>Nothing moves, flashes or plays automatically. Video starts only when you press play.</li>
@@ -1963,15 +2034,17 @@ def build_accessibility():
 
         <h2>What is not good enough yet</h2>
         <ul>
+          <li>No independent accessibility audit has been carried out. Everything above is our own assessment of our own work.</li>
           <li>Our films have captions burned into the picture rather than selectable caption tracks. Transcripts cover the content, but captions cannot yet be resized or restyled.</li>
           <li>The site has not yet been tested with a screen reader by someone who uses one daily. We would rather say so than imply otherwise.</li>
+          <li>We have not tested with speech input, screen magnification, or a switch device.</li>
           <li>Some of the places we write about are genuinely difficult to reach. We describe the access honestly rather than pretending otherwise, but we cannot change the ground.</li>
         </ul>
 
         <h2>Tell us where it fails</h2>
         <p>If something here does not work for you, please tell us at <a href="mailto:{e}">{e}</a> and say what you were trying to do. We will reply, and we will say plainly whether and when we can fix it.</p>
 
-        <p>This statement describes the site as built and reviewed on {SITE['legal_reviewed']}. It is an honest self-assessment rather than a third-party audit.</p>""")
+        <p>This statement describes the site as built and reviewed on {SITE['legal_reviewed']}. It is an honest self-assessment rather than a third-party audit, and we would rather understate what we have verified than claim a standard we have not tested against.</p>""")
 
 
 def build_terms():
@@ -2004,29 +2077,16 @@ def build_terms():
 
 
 def build_info():
-    """A non-sensitive deployment identity, so live verification can tell
-    'the new deploy failed' from 'the new deploy has not arrived yet'.
-    Commit SHA, build time, environment. Nothing else."""
-    import json
-    import datetime
+    """Deployment identity. There is exactly one implementation of this and it
+    is tools/build-info.py — the deploy runs it directly as the build command,
+    so a local build must not produce a second, differently-defaulted file."""
     import subprocess as _sp
-
-    commit = os.environ.get("VERCEL_GIT_COMMIT_SHA") or os.environ.get("GITHUB_SHA")
-    if not commit:
-        try:
-            commit = _sp.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT,
-                                      stderr=_sp.DEVNULL).decode().strip()
-        except Exception:                                     # noqa: BLE001
-            commit = "unknown"
-
-    write("build-info.json", json.dumps({
-        "commit": commit,
-        "builtAt": datetime.datetime.now(datetime.timezone.utc)
-                   .replace(microsecond=0).isoformat().replace("+00:00", "Z"),
-        "environment": os.environ.get("IC_ENVIRONMENT", "production"),
-        "publishedStories": LIVE_COUNT,
-    }, indent=2) + "\n")
-    PUBLIC_PAGES.remove("build-info.json")
+    r = _sp.run([sys.executable, os.path.join(ROOT, "tools", "build-info.py")],
+                capture_output=True, text=True)
+    if r.returncode != 0:
+        print("\nBUILD FAILED — tools/build-info.py exited "
+              f"{r.returncode}:\n{r.stdout}{r.stderr}")
+        raise SystemExit(1)
 
 
 def build_sitemap_and_robots():
@@ -2051,7 +2111,75 @@ def build_sitemap_and_robots():
 
 
 
-SOON_SLUGS = set('ryde/' + k for k in SOON)
+# ------------------------------------------------ registry / renderer parity
+# Page bodies still come from STORIES and SOON while the registry governs
+# publication. That is two sources of truth for the same story, which is the
+# divergence this whole change exists to stop — so until the bodies are
+# generated from records, the two must be proven identical on every build.
+
+def validate_render_sources():
+    errs = []
+    render_keys = set(STORIES) | set(SOON)
+    registry_keys = set(RENDER_KEY_TO_SLUG)
+
+    if len(RENDER_KEY_TO_SLUG) != len(REG["stories"]):
+        errs.append("two records share the last segment of their slug, so a "
+                    "renderer key cannot be resolved unambiguously")
+
+    for key in sorted(render_keys - registry_keys):
+        errs.append(f"{key!r} is rendered but has no record in content/stories/")
+
+    # A record only needs a renderer entry if its status lets it render at all.
+    # town-hall-rebox is blocked and correctly has none.
+    for key in sorted(registry_keys - render_keys):
+        status = BY_SLUG[RENDER_KEY_TO_SLUG[key]]["status"]
+        if status in RENDERABLE:
+            errs.append(f"{key!r} is {status} and should render, but has no "
+                        f"renderer entry in STORIES or SOON")
+
+    for key in sorted(render_keys & registry_keys):
+        rec = BY_SLUG[RENDER_KEY_TO_SLUG[key]]
+        if key in STORIES:
+            title, line = STORIES[key]["title"], STORIES[key]["line"]
+            href = STORIES[key]["collection_href"]
+        else:
+            _coll, href, title, line = SOON[key]
+        if title != rec["title"]:
+            errs.append(f"{key}: renderer title {title!r} != record "
+                        f"{rec['title']!r} ({rec['_path']})")
+        if line != rec["line"]:
+            errs.append(f"{key}: renderer line differs from the record "
+                        f"({rec['_path']})")
+        # Compare collection identity, not the display string: the renderer is
+        # free to use a short label, but it must link to the same collection
+        # the record declares.
+        rendered_coll = os.path.basename(href).replace(".html", "")
+        rec_colls = set(rec.get("collections") or [])
+        if rendered_coll not in rec_colls:
+            errs.append(f"{key}: renderer links to collection "
+                        f"{rendered_coll!r} but the record declares "
+                        f"{sorted(rec_colls)} ({rec['_path']})")
+
+    # Publication permission comes from status, never from which dict a key
+    # happens to sit in.
+    for key in sorted(render_keys & registry_keys):
+        status = BY_SLUG[RENDER_KEY_TO_SLUG[key]]["status"]
+        if key in STORIES and status not in RENDER_FULL:
+            errs.append(f"{key}: has a full story body but status is {status!r} "
+                        f"— only {sorted(RENDER_FULL)} may render a full page")
+        if key in SOON and status not in RENDER_REDUCED:
+            errs.append(f"{key}: is in SOON but status is {status!r} — only "
+                        f"{sorted(RENDER_REDUCED)} render the reduced page")
+
+    if errs:
+        print("\nBUILD FAILED — the registry and the renderers disagree:\n")
+        for e in errs:
+            print("   " + e)
+        print("\nThe record is authoritative. Correct the renderer to match it.\n")
+        raise SystemExit(1)
+
+
+validate_render_sources()
 
 # ============================================================ run
 
@@ -2066,10 +2194,16 @@ if __name__ == "__main__":
     build_how_we_work()
     build_ryde140()
     build_wartime()
-    for slug in STORIES:
-        build_story(slug)
-    for slug in SOON:
-        build_soon(slug)
+
+    # Driven by status, in slug order. Nothing renders because it appears in a
+    # dictionary; it renders because its record says it may.
+    for _slug, _st in sorted(BY_SLUG.items()):
+        _key = _slug.rsplit("/", 1)[-1]
+        if _st["status"] in RENDER_FULL:
+            build_story(_key)
+        elif _st["status"] in RENDER_REDUCED:
+            build_soon(_key)
+
     build_partners()
     for key in PARTNER_PAGES:
         build_partner_page(key)
@@ -2081,12 +2215,21 @@ if __name__ == "__main__":
     build_sitemap_and_robots()
     build_info()
 
-    # Nothing in a non-publishable state may have produced a page.
-    blocked = [st["slug"] + ".html" for st in REG["stories"].values()
-               if st.get("status") not in PUBLISHABLE]
-    leaked = [b for b in blocked if b in PUBLIC_PAGES and b.replace(".html", "") not in SOON_SLUGS]
+    # Nothing outside a renderable state may have produced a page, by any route.
+    leaked = sorted(st["slug"] + ".html" for st in REG["stories"].values()
+                    if st["status"] not in RENDERABLE
+                    and st["slug"] + ".html" in PUBLIC_PAGES)
     if leaked:
-        print("\nBUILD FAILED — non-published records produced pages:", leaked)
+        print("\nBUILD FAILED — records that must not publish produced pages:",
+              leaked)
+        raise SystemExit(1)
+
+    if len(PUBLIC_PAGES) != EXPECTED_PUBLIC_PAGES:
+        print(f"\nBUILD FAILED — {len(PUBLIC_PAGES)} public pages, expected "
+              f"{EXPECTED_PUBLIC_PAGES}. If this change is intended, update "
+              f"EXPECTED_PUBLIC_PAGES and say why in the pull request.")
+        for p in sorted(PUBLIC_PAGES):
+            print("   " + p)
         raise SystemExit(1)
 
     guard(PUBLIC_PAGES)

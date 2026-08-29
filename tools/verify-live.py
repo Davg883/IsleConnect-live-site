@@ -30,19 +30,23 @@ import time
 import urllib.error
 import urllib.request
 
-BANNED = [
-    "Copy needed", "Not wired up", "Content needed before launch",
-    "Wording check needed", "Confirm before launch", "Illustrative figures",
-    "TODO", "FIXME", "Lorem ipsum", "BUILD-SPEC", "ASSET-MANIFEST",
-]
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import content_policy                                         # noqa: E402
 
+# One policy, shared with the build guard, so a phrase blocked before a deploy
+# is the same phrase blocked after it.
+BANNED = content_policy.BANNED_PHRASES
+
+# /build-info.json is deliberately NOT in this list. It is required only when a
+# specific commit has to be confirmed — with --expect, or unless build identity
+# has been switched off deliberately. See the identity step in main().
 MUST_EXIST = [
     "/", "/explore.html", "/journeys.html", "/how-we-work.html",
     "/for-partners.html", "/about.html", "/contact.html",
     "/privacy.html", "/accessibility.html", "/terms.html",
     "/ryde-140.html", "/wartime-trail.html",
     "/ryde/royal-victoria-arcade.html", "/ryde/puckpool-battery.html",
-    "/robots.txt", "/sitemap.xml", "/build-info.json",
+    "/robots.txt", "/sitemap.xml",
 ]
 
 # Retired. Each must either be gone, or redirect to its recorded destination.
@@ -98,7 +102,17 @@ def main():
     ap.add_argument("--wait", type=int, default=int(os.environ.get("IC_WAIT", "300")),
                     help="seconds to wait for that commit (default 300)")
     ap.add_argument("--interval", type=int, default=15)
+    ap.add_argument("--no-build-identity", action="store_true",
+                    default=os.environ.get("IC_NO_BUILD_IDENTITY", "") not in ("", "0"),
+                    help="build identity is switched off deliberately (no "
+                         "buildCommand); skip the commit check and verify "
+                         "content only")
     args = ap.parse_args()
+
+    if args.no_build_identity and args.expect:
+        print("--expect and --no-build-identity are contradictory: a commit "
+              "cannot be confirmed without build identity.", file=sys.stderr)
+        return 1
 
     base = args.base.rstrip("/")
     expect = args.expect
@@ -108,61 +122,88 @@ def main():
     print(f"Verifying {base}")
 
     # ---- 1 · which commit is actually live -------------------------------
+    # Exit 2 means "the deployment has not arrived". It must never be reported
+    # as exit 1, which means "the content that IS deployed is wrong". Confusing
+    # the two is exactly what this step exists to prevent.
+    required = list(MUST_EXIST)
     deadline = time.time() + max(args.wait, 0)
     deployed = None
-    while True:
-        status, body, _ = fetch(base + "/build-info.json")
-        if status == 200:
-            try:
-                import json
-                info = json.loads(body)
-                deployed = info.get("commit")
-                built = info.get("builtAt")
-            except Exception:                                 # noqa: BLE001
-                deployed, built = None, None
-            if deployed:
-                print(f"  deployed commit {deployed[:12]}  built {built}")
-                if not expect or deployed.startswith(expect[:12]):
-                    break
-                if time.time() >= deadline:
-                    print(f"\nTIMED OUT — {base} is still serving "
-                          f"{deployed[:12]}, expected {expect[:12]}.")
-                    print("The deployment has not arrived yet. This is not a "
-                          "content failure; re-run when the deploy completes.")
+
+    if args.no_build_identity:
+        print("  build identity disabled by request — verifying content only.")
+    else:
+        # Identity is served, so it is required to be present and correct.
+        required = required + ["/build-info.json"]
+        while True:
+            status, body, _ = fetch(base + "/build-info.json")
+            if status == 200:
+                try:
+                    import json
+                    info = json.loads(body)
+                    deployed = info.get("commit")
+                    built = info.get("builtAt")
+                    env = info.get("environment")
+                except Exception:                             # noqa: BLE001
+                    deployed, built, env = None, None, None
+                if deployed:
+                    print(f"  deployed commit {deployed[:12]}  built {built}"
+                          f"  environment {env}")
+                    if not expect or deployed.startswith(expect[:12]):
+                        break
+                    if time.time() >= deadline:
+                        print(f"\nTIMED OUT — {base} is still serving "
+                              f"{deployed[:12]}, expected {expect[:12]}.")
+                        print("The deployment has not arrived yet. This is not "
+                              "a content failure; re-run when it completes.")
+                        return 2
+                    print(f"  waiting for {expect[:12]} …")
+                    time.sleep(args.interval)
+                    continue
+                if expect:
+                    print("\nTIMED OUT — /build-info.json is being served but "
+                          "carries no commit, so the deployed revision cannot "
+                          f"be confirmed against {expect[:12]}.")
                     return 2
-                print(f"  waiting for {expect[:12]} …")
-                time.sleep(args.interval)
-                continue
-            break
-        if status == 404:
-            if expect and time.time() < deadline:
-                print("  /build-info.json not there yet, waiting …")
-                time.sleep(args.interval)
-                continue
-            print("  /build-info.json absent — the deployed build predates "
-                  "build identity. Continuing with content checks only.")
-            break
-        if time.time() >= deadline:
-            print(f"\nCould not read /build-info.json ({status}). Aborting.")
-            return 2
-        time.sleep(args.interval)
+                break
+            if status == 404:
+                if time.time() < deadline and (expect or args.wait):
+                    print("  /build-info.json not there yet, waiting …")
+                    time.sleep(args.interval)
+                    continue
+                if expect:
+                    print(f"\nTIMED OUT — {base}/build-info.json is still 404 "
+                          f"after {args.wait}s, so the deployment serving "
+                          f"{expect[:12]} has not arrived.")
+                    print("If build identity is switched off deliberately, "
+                          "re-run with --no-build-identity instead.")
+                    return 2
+                print("\n/build-info.json is absent and no commit was expected.")
+                print("If that is deliberate, re-run with --no-build-identity "
+                      "to verify content only. Treating it as a failure here, "
+                      "because an unannounced missing identity file usually "
+                      "means the build command did not run.")
+                return 1
+            if time.time() >= deadline:
+                print(f"\nCould not read /build-info.json ({status}). The "
+                      f"deployment cannot be identified.")
+                return 2
+            time.sleep(args.interval)
 
     fails, checked = [], 0
 
     # ---- 2 · pages that must exist and be clean --------------------------
     print()
-    for path in MUST_EXIST:
+    for path in required:
         status, body, _ = fetch(base + path)
         checked += 1
         if status != 200:
             fails.append(f"{path} returned {status}")
             print(f"  {status}  {path}")
             continue
-        visible = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", body, flags=re.S | re.I)
-        visible = re.sub(r"<[^>]+>", " ", visible)
-        for phrase in BANNED:
-            if phrase in visible:
-                fails.append(f"{path} still contains {phrase!r}")
+        # Same policy and the same scanning surfaces as the build guard:
+        # comments and attribute values included.
+        for problem in content_policy.scan(body, path):
+            fails.append(problem)
         if "<form" in body and 'action="#"' in body:
             fails.append(f"{path} serves a form posting to '#'")
         print(f"  200  {path}")

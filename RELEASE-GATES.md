@@ -55,6 +55,48 @@ Generated, not approved. Read each against how you actually operate.
 
 Confirmed by ____________________ on ____________
 
+## 2b · Accessibility claims
+
+The page describes what has been built and what has been checked. It does not
+claim WCAG 2.2 conformance, and it must not until someone has actually tested
+against it. Confirm every statement on the page is true of the site as built:
+
+- [ ] Keyboard operation walked on each page type — home, explore, journeys,
+      collection, published story, in-development story, partner, legal
+- [ ] Visible focus outline on every interactive element
+- [ ] Skip link present and working
+- [ ] Text and interface colours checked against AA contrast ratios, with the
+      figures recorded somewhere they can be re-checked
+- [ ] Page reflows to one column, and text resizes to 200% without loss
+- [ ] `prefers-reduced-motion` honoured
+- [ ] The press-and-hold reveal also works as a plain toggle
+- [ ] Every film has a transcript on the same page
+- [ ] The limitations list is complete and current — no audit, no screen-reader
+      testing, burned-in captions, no speech-input/magnification/switch testing
+
+If a box cannot be ticked, the sentence that claims it comes off the page before
+merge. Understating what has been verified is always the safer error.
+
+- [ ] Independent audit scheduled, or a decision recorded not to commission one
+      yet, and why
+
+Confirmed by ____________________ on ____________
+
+## 2c · Privacy copy matches behaviour
+
+`privacy.html` currently states that **no** usage or analytics data is
+collected, because `EVENTS_ENDPOINT` in `build.py` is empty and the measurement
+layer sends nothing.
+
+- [ ] `EVENTS_ENDPOINT` is still empty, and the page still says so
+- [ ] No third-party script, font, or embed on any page makes a request that
+      would contradict "we transmit no record of the pages you open"
+- [ ] If measurement is switched on later: the privacy copy is rewritten and
+      approved **before** the endpoint is set, not after, and this gate is
+      re-run
+
+Confirmed by ____________________ on ____________
+
 ## 3 · Retired URLs
 
 - [ ] Checked whether any of the six were shared publicly
