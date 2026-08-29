@@ -29,7 +29,12 @@ except ImportError:                                           # pragma: no cover
         "The count is parsed from the records, never pattern-matched out of\n"
         "the file text, so a malformed record fails loudly instead of being\n"
         "quietly counted wrong.\n\n"
-        "    pip install -r requirements.txt\n")
+        "Locally:   pip install -r requirements.txt\n"
+        "On Vercel: the platform installs requirements.txt itself before the\n"
+        "           build command runs. Do NOT add a pip install to the build\n"
+        "           command — that environment is uv-managed and pip refuses\n"
+        "           to write to it (PEP 668). If PyYAML is missing there, the\n"
+        "           dependency declaration is what needs fixing.\n")
 
 
 def commit():

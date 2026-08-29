@@ -21,9 +21,15 @@ committed-output check would be meaningless.
 It is generated at deploy time. `vercel.json` sets:
 
 ```
-buildCommand: pip install -r requirements.txt && python3 tools/build-info.py
+buildCommand: python3 tools/build-info.py
 outputDirectory: .
 ```
+
+Vercel installs `requirements.txt` itself, before the build command runs — the
+deploy log shows `Installing dependencies … + pyyaml`. **Do not add a `pip
+install` to the build command.** That environment is managed by `uv`, so pip
+refuses to write to it (PEP 668, `externally-managed-environment`) and the
+deploy fails. Declaring the dependency in `requirements.txt` is the whole job.
 
 `tools/build-info.py` is the **only** implementation of `build-info.json`.
 `build.py` calls this script rather than carrying its own copy: two
@@ -42,9 +48,8 @@ site**. That is deliberate:
   out of the file text, which would miss a record whose status carries a
   trailing comment and would happily count one that does not parse at all.
 
-Parsing needs PyYAML, so the build command installs `requirements.txt` first.
-A malformed record now fails the deploy instead of silently producing a wrong
-count.
+Parsing needs PyYAML, which is why it is in `requirements.txt`. A malformed
+record now fails the deploy instead of silently producing a wrong count.
 
 The committed HTML staying authoritative is what the `checks.yml` drift test
 enforces: if the records and the committed pages disagree, CI fails on the
