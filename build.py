@@ -33,7 +33,10 @@ SITE = {
     # Blank until a real handler exists. While blank the contact page offers a
     # direct email route rather than a form that discards enquiries.
     "form_endpoint":  "",
-    "legal_reviewed": "18 August 2026",
+    # The date a person actually read and approved the three legal notices.
+    # Not a build date and not a placeholder — if the notices change, this
+    # moves only when someone has read them again.
+    "legal_reviewed": "29 August 2026",
 }
 
 # ============================================================ content registry
