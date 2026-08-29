@@ -210,6 +210,41 @@ for page in pages:
         fail("10 rules", f"{page}: names ISLE CONNECT LTD without disclaiming it")
 
 
+# 11 · a retired or withdrawn URL never comes back
+# The sitemap is generated from the pages actually written, so a retired page
+# can only reappear if someone recreates it or hand-links it. Both are caught
+# here rather than discovered in a search index months later.
+RETIRED_PATHS = [
+    "explore/the-garlic-farm.html",
+    "explore/darker-side-of-wight.html",
+    "explore/bembridge-fort.html",
+    "for-venues.html",
+    "for-creators.html",
+    "work-with-us.html",
+]
+# Withdrawn outright rather than redirected: the page made a claim that was
+# never agreed, so it must not exist, be linked, or be advertised to crawlers.
+WITHDRAWN_PATHS = ["explore/the-garlic-farm.html"]
+
+sitemap = ""
+sitemap_path = os.path.join(ROOT, "sitemap.xml")
+if os.path.exists(sitemap_path):
+    sitemap = open(sitemap_path, encoding="utf-8").read()
+
+for retired in RETIRED_PATHS:
+    if os.path.exists(os.path.join(ROOT, retired)):
+        fail("11 retired", f"{retired} exists again in the production tree")
+    if retired in sitemap:
+        fail("11 retired", f"{retired} is advertised in sitemap.xml")
+
+for page in pages:
+    body = open(os.path.join(ROOT, page), encoding="utf-8").read()
+    for withdrawn in WITHDRAWN_PATHS:
+        leaf = withdrawn.rsplit("/", 1)[-1]
+        if re.search(r'(?:href|src)="[^"]*' + re.escape(leaf) + r'"', body):
+            fail("11 retired", f"{page} links to withdrawn page {withdrawn}")
+
+
 # ------------------------------------------------------------------ report
 print()
 for w in WARN:

@@ -104,10 +104,36 @@ Confirmed by ____________________ on ____________
 - [ ] Checked search-indexing status
 - [ ] Checked whether any appears on a printed QR code
 - [ ] Destination confirmed for each (see the map in `DEPLOY.md`)
-- [ ] Once traffic is understood, the three project-page redirects moved from
-      temporary (307) to permanent (301) — or to 410 if that reads better
+- [ ] Once traffic is understood, the two remaining project-page redirects
+      moved from temporary (307) to permanent (301) — or to gone, if that
+      reads better
 
 Confirmed by ____________________ on ____________
+
+### 3b · The Garlic Farm page — withdrawn, not moved
+
+`/explore/the-garlic-farm.html` described a partnership that was never agreed.
+It is the one retired URL that does **not** redirect: it answers 404, because
+redirecting it to Explore would tell a visitor, and a search engine, that it
+is still part of the programme. That is the claim being withdrawn.
+
+Removing it from the site does not remove it from a search index. Google may
+keep serving a cached copy of the old page until it recrawls.
+
+- [ ] Confirmed the live URL answers 404 and does not redirect
+      (`tools/verify-live.py` checks this on every run)
+- [ ] Removal requested via Search Console → **Removals → Temporarily remove
+      URL**, for this exact URL. Note that a removal request hides the result
+      for about six months; the durable signal is the 404 from the live URL,
+      which is why both are needed.
+- [ ] Updated `sitemap.xml` submitted
+- [ ] Indexing requested for `/`, `/journeys.html`, `/how-we-work.html` and
+      the three partner pages
+- [ ] Re-checked after two weeks that the cached copy is gone
+
+Removal requested by ____________________ on ____________
+
+Cache confirmed gone by ____________________ on ____________
 
 ## 4 · Operator identity
 

@@ -21,11 +21,6 @@
       "permanent": true
     },
     {
-      "source": "/explore/the-garlic-farm.html",
-      "destination": "/explore.html",
-      "permanent": false
-    },
-    {
       "source": "/explore/darker-side-of-wight.html",
       "destination": "/explore.html",
       "permanent": false
