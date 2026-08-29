@@ -53,3 +53,7 @@ jobs:
             exit 1
           fi
           echo "Committed output matches the registry."
+
+      # Standard library only; touches no network beyond a local test server.
+      - name: Verifier unit tests
+        run: python3 tools/test_verify_live.py

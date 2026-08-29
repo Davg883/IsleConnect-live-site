@@ -73,8 +73,14 @@ jobs:
           echo "sha=$DEPLOY_SHA"                           >> "$GITHUB_OUTPUT"
           echo "wait=600"                                  >> "$GITHUB_OUTPUT"
 
+      # Production is not protected, so the secret is unnecessary there and this
+      # step works without it. It is passed anyway so a manual run against a
+      # protected preview works from the same workflow. An absent secret means
+      # no header is sent and behaviour is exactly as before.
       - name: Verify the live domain
         if: steps.t.outputs.run == 'true'
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           python3 tools/verify-live.py \
             --base "${{ steps.t.outputs.base }}" \

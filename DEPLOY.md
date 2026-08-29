@@ -142,7 +142,42 @@ Runs against the **live domain**, not the local build.
    exactly how the last two releases went unnoticed.
 
 Exit codes: `0` verified · `1` a real failure · `2` the deployment has not
-arrived yet. Those are different things and the script says which.
+arrived yet · `3` access blocked. Those are different things and the script
+says which.
+
+### Verifying a protected preview
+
+A Vercel preview with Deployment Protection enabled answers **every** request
+with a 302 into `vercel.com/sso-api` before any of this repository's
+configuration is reached. A browser session gets through because it carries a
+Vercel login cookie; a standalone script does not inherit that.
+
+Untreated, this looks like a site-wide failure. It is not — nothing about the
+site was tested. The verifier detects the SSO redirect and exits **3**, with a
+message saying so.
+
+To verify a protected preview from a terminal or CI, set the automation bypass
+secret from *Project Settings → Deployment Protection → Protection Bypass for
+Automation*:
+
+```powershell
+$env:VERCEL_AUTOMATION_BYPASS_SECRET = "<value from Vercel>"
+py tools/verify-live.py --base https://<preview-host> --no-build-identity
+```
+
+The verifier sends it as the `x-vercel-protection-bypass` header on every
+request. It is **never** put in a URL: a token in a query string is written to
+server logs, browser history, and any error message that echoes the URL. The
+value is redacted from the script's own output.
+
+In CI the value comes from the `VERCEL_AUTOMATION_BYPASS_SECRET` repository
+secret. It is not needed for production, which is unprotected — with no secret
+set, no header is sent and behaviour is unchanged.
+
+`python3 tools/test_verify_live.py` covers this: that the header is sent only
+when configured, that the secret never reaches a URL or the output, that a
+protected preview exits 3 rather than 1, and that ordinary unprotected
+verification is unaffected. It runs in `checks.yml` on every push.
 
 > **Note:** it needs outbound network access. It runs in CI and on your machine.
 > An environment without outbound access cannot run it at all; verify from a

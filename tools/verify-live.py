@@ -19,6 +19,19 @@ Exit codes
     0  verified
     1  a real failure — content is wrong, or a retired page still serves
     2  timed out waiting for the expected commit (deploy not arrived)
+    3  access blocked — a protected deployment answered with its login flow
+       and no bypass secret was configured. Nothing about the site was tested.
+
+Protected previews
+    A Vercel preview with Deployment Protection enabled answers every request
+    with a 302 to vercel.com/sso-api before any of our configuration is
+    reached. That is not a content failure and must never be reported as one.
+
+    Set VERCEL_AUTOMATION_BYPASS_SECRET and the verifier sends it as the
+    x-vercel-protection-bypass header on every request. The secret is never
+    placed in a URL, never logged, and never printed: a query-string token
+    would land in server logs, browser history and any error message that
+    echoes the URL.
 """
 
 import argparse
@@ -81,17 +94,55 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+BYPASS_ENV = "VERCEL_AUTOMATION_BYPASS_SECRET"
+BYPASS_HEADER = "x-vercel-protection-bypass"
+
+
+def bypass_secret():
+    """The protection-bypass secret, or None. Read at call time so a test can
+    set it, and stripped so a trailing newline from a secret store cannot
+    produce an invalid header value."""
+    return (os.environ.get(BYPASS_ENV) or "").strip() or None
+
+
+def request_headers():
+    h = {"User-Agent": "isleconnect-verify/3"}
+    secret = bypass_secret()
+    if secret:
+        # Header, never a query parameter: a token in the URL is written to
+        # server logs, browser history, and any message that echoes the URL.
+        h[BYPASS_HEADER] = secret
+    return h
+
+
+def redact(text):
+    """Never let the secret reach stdout, an exception message, or CI logs."""
+    secret = bypass_secret()
+    if secret and text:
+        return text.replace(secret, "***redacted***")
+    return text
+
+
+def is_protection_challenge(status, headers):
+    """A protected deployment answers with a redirect into Vercel's SSO flow.
+    That says nothing about the site's content."""
+    if status not in (301, 302, 303, 307, 308):
+        return False
+    location = headers.get("Location", "") or ""
+    return "vercel.com/sso-api" in location or "/.well-known/vercel/sso" in location
+
+
 def fetch(url, follow=True):
     opener = (urllib.request.build_opener() if follow
               else urllib.request.build_opener(NoRedirect))
-    req = urllib.request.Request(url, headers={"User-Agent": "isleconnect-verify/2"})
+    req = urllib.request.Request(url, headers=request_headers())
     try:
         with opener.open(req, timeout=25) as r:
             return r.status, r.read().decode("utf-8", "replace"), dict(r.headers)
     except urllib.error.HTTPError as e:
         return e.code, "", dict(e.headers or {})
     except Exception as e:                                    # noqa: BLE001
-        return None, str(e), {}
+        return None, redact(str(e)), {}
 
 
 def local_head():
@@ -129,6 +180,31 @@ def main():
         expect = local_head() or ""
 
     print(f"Verifying {base}")
+    if bypass_secret():
+        print(f"  sending {BYPASS_HEADER} (secret from ${BYPASS_ENV})")
+
+    # ---- 0 · can we reach the site at all? -------------------------------
+    # A protected deployment answers everything with its login redirect. That
+    # is an access problem, not a content problem, and reporting it as exit 1
+    # would send someone hunting for a bug in a site nobody has seen.
+    probe_status, _probe_body, probe_headers = fetch(base + "/", follow=False)
+    if is_protection_challenge(probe_status, probe_headers):
+        print(f"\nACCESS BLOCKED — {base} answered {probe_status} into Vercel's "
+              f"login flow.")
+        if bypass_secret():
+            print(f"A {BYPASS_HEADER} header was sent but did not satisfy the "
+                  f"deployment. Check that ${BYPASS_ENV} matches the value in "
+                  f"Project Settings → Deployment Protection → Protection "
+                  f"Bypass for Automation, and that it has been regenerated "
+                  f"into this environment since it last changed.")
+        else:
+            print(f"No bypass secret is configured. Set ${BYPASS_ENV} to the "
+                  f"value from Project Settings → Deployment Protection → "
+                  f"Protection Bypass for Automation, or verify against an "
+                  f"unprotected deployment such as production.")
+        print("\nNothing about the site was tested. This is not a content "
+              "failure.")
+        return 3
 
     # ---- 1 · which commit is actually live -------------------------------
     # Exit 2 means "the deployment has not arrived". It must never be reported
