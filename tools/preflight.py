@@ -157,8 +157,12 @@ for page in pages:
             fail("9 video", f"{page}: <video> without a poster")
         if "autoplay" in tag and "muted" not in tag:
             fail("9 video", f"{page}: autoplay without muted")
-    if "<video" in body and "transcript" not in body.lower():
-        warn("9 video", f"{page}: video present with no transcript on the page")
+    # accessibility.html states that every film has a written transcript on the
+    # same page. That is a promise to a visitor, so an unmet one fails the
+    # build rather than warning about it.
+    if "<video" in body and 'class="transcript"' not in body:
+        fail("9 video", f"{page}: <video> with no transcript on the page — "
+                        f"accessibility.html promises one beside every film")
 
 
 # 10 · the standing editorial rules that are mechanically checkable

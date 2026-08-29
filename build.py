@@ -574,9 +574,35 @@ def routestrip(depth):
 {tail}"""
 
 
+# accessibility.html promises a written transcript on the same page as every
+# film. A film appears on more than one page — the homepage and its collection
+# page as well as its own story page — so the promise only holds if the
+# transcript travels with the film. Keyed by video slug and emitted by
+# video_block itself, it holds by construction rather than by remembering.
+# Populated below, once STORIES exists.
+VIDEO_TRANSCRIPTS = {}
+
+
+def transcript_details(video_slug, indent="        "):
+    lines = VIDEO_TRANSCRIPTS.get(video_slug) or []
+    if not lines:
+        return ""
+    body = "\n".join(f"{indent}    <p>{line}</p>" for line in lines)
+    return (f"""{indent}<details class="transcript">
+{indent}  <summary>Read the transcript</summary>
+{indent}  <div class="transcript__body">
+{body}
+{indent}  </div>
+{indent}</details>
+""")
+
+
 def video_block(slug, poster, label, note, depth, variant="720"):
     """variant: '720' for grid/summary contexts, '' for the full 1080p file
-    on a dedicated story page where the video is the whole point."""
+    on a dedicated story page where the video is the whole point.
+
+    The transcript is part of the film, not part of the page that happens to
+    embed it, so it is emitted here on every page the film appears."""
     src = slug + ("-720" if variant == "720" else "") + ".mp4"
     return f"""        <div class="video">
           <video controls preload="none" poster="{rel('assets/img/' + poster, depth)}"
@@ -587,7 +613,7 @@ def video_block(slug, poster, label, note, depth, variant="720"):
           </video>
           <p class="video__caption"><b>{label}</b><span>{note}</span></p>
         </div>
-"""
+""" + transcript_details(slug)
 
 
 PUBLIC_PAGES = []
@@ -732,6 +758,13 @@ STORIES = {
         },
     },
 }
+
+# The transcript belongs to the film, keyed by video slug, so video_block can
+# emit it on every page the film appears — not only its own story page.
+VIDEO_TRANSCRIPTS.update({
+    s["video"]: (s.get("transcript") or [])
+    for s in STORIES.values() if s.get("video")
+})
 
 SOON = {
     "appley-tower": ("Wartime Trail", "wartime-trail.html", "Appley Tower",
@@ -1304,16 +1337,8 @@ def build_story(slug):
                 trail=s["collection_href"].replace(".html", ""),
                 stop=stop_no)
     html += header("journeys.html", d, over=True)
-    transcript = "\n".join(f"          <p>{line}</p>" for line in s.get("transcript", []))
-    transcript_block = ""
-    if transcript:
-        transcript_block = f"""      <details class="transcript">
-        <summary>Read the transcript</summary>
-        <div class="transcript__body">
-{transcript}
-        </div>
-      </details>
-"""
+    # The transcript is emitted by video_block itself, so it travels with the
+    # film to every page that embeds it. Nothing to add here.
 
     # A partner block exists only when a partner record is approved for
     # inclusion and carries a real directions URL. An unapproved partner is
@@ -1358,7 +1383,7 @@ def build_story(slug):
 
     <section class="exp-section">
       <h2 class="visually-hidden">The experience</h2>
-{video_block(s['video'], s['poster'], s['video_label'], s['video_note'], d, variant='')}{transcript_block}    </section>
+{video_block(s['video'], s['poster'], s['video_label'], s['video_note'], d, variant='')}    </section>
 
     <section class="exp-section" id="story">
       <span class="eyebrow">The story</span>
@@ -2025,7 +2050,7 @@ def build_accessibility():
           <li>Every page is built to be operated by keyboard alone, with a visible focus outline and a skip link to the main content. We have walked the main routes this way; we have not exhaustively tested every control.</li>
           <li>Text and background colours were chosen against the WCAG 2.2 AA contrast ratios, and we have checked the main text and interface colours. The full palette has not been independently verified.</li>
           <li>Text resizes without breaking the layout, and the page reflows to a single column on small screens.</li>
-          <li>Every film has a written transcript on the same page.</li>
+          <li>Every film has a written transcript on the same page, in a panel you can open — including where the same film also appears on the homepage or a journey page. Our build refuses to publish a page that carries a film without one.</li>
           <li>Nothing moves, flashes or plays automatically. Video starts only when you press play.</li>
           <li>If your device or browser is set to reduce motion, animation is switched off and the content still works.</li>
           <li>Our press-and-hold reveal can also be operated as a simple on/off toggle, because holding a button is not possible with some assistive technology.</li>
