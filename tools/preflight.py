@@ -52,7 +52,6 @@ EXPECTED_PUBLIC_PAGES = [
     "consultancy.html",
     "contact.html",
     "explore.html",
-    "for-partners.html",
     "how-we-work.html",
     "index.html",
     "journeys.html",
@@ -70,6 +69,7 @@ EXPECTED_PUBLIC_PAGES = [
     "ryde/union-street.html",
     "terms.html",
     "wartime-trail.html",
+    "work-with-us.html",
 ]
 
 if pages != EXPECTED_PUBLIC_PAGES:
@@ -254,7 +254,7 @@ RETIRED_PATHS = [
     "explore/bembridge-fort.html",
     "for-venues.html",
     "for-creators.html",
-    "work-with-us.html",
+    "for-partners.html",
 ]
 # Withdrawn outright rather than redirected: the page made a claim that was
 # never agreed, so it must not exist, be linked, or be advertised to crawlers.

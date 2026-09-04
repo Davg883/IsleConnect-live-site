@@ -7,7 +7,7 @@ collections: [ryde-140]
 location:
   name: "Lind Street, Ryde"
   town: Ryde
-marks: [recon, archive, source]
+marks: [recon, archive]
 media:
   video: town-hall
   poster: card-town-hall.jpg
@@ -16,8 +16,8 @@ media:
   rights: cleared
 thenNow: null
 governance:
-  evidenceStatus: machine_supported
-  rightsStatus: cleared
+  evidenceStatus: lead
+  rightsStatus: under_review
   specialistReviewStatus: pending
   editorialReview: complete
   localReview: complete
@@ -32,7 +32,7 @@ governance:
     - "Isle of Wight Record Office: Lind Street Municipal Complex Plans (1830–1831)"
     - "Borough of Ryde Town Hall Extension Committee Minutes (1867–1869)"
     - "Hampshire Telegraph & Sussex Chronicle: Queen Victoria Golden Jubilee Ryde Celebrations (June 1887)"
-    - "Isle of Wight Local Studies Collection: Architectural drawing of Lind Street & Ryde Town Hall, Edwardian municipal survey c.1905 (Ref: IWLS-RD-1905-LIND-04)"
+    - "Lind Street Streetscape Drawing: Archival material (provenance and repository citation currently under review)"
     - "Contemporary Photographic Survey & Laser Measure Audit, Lind Street Facade (September 2026)"
   claims:
     - id: claim-1831-opening
@@ -51,10 +51,10 @@ governance:
       specialistReviewStatus: pending
       sources: ["Hampshire Telegraph & Sussex Chronicle (June 1887)"]
     - id: claim-1905-drawing
-      statement: "Edwardian architectural streetscape drawing records Lind Street elevations and Town Hall detail."
-      evidenceStatus: source_inspected
+      statement: "Historic architectural streetscape drawing records Lind Street elevations and Town Hall detail (provenance under review)."
+      evidenceStatus: lead
       specialistReviewStatus: pending
-      sources: ["IWLS-RD-1905-LIND-04 (c.1905)"]
+      sources: ["Archival streetscape drawing (provenance under review)"]
     - id: claim-closure-early2000s
       statement: "The Town Hall ceased regular civic and court functions and closed its doors in the early 2000s."
       evidenceStatus: source_inspected

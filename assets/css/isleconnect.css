@@ -789,6 +789,11 @@ a:hover { color: var(--navy); }
   line-height: 0;
 }
 .video video { width: 100%; height: auto; display: block; }
+.video--portrait {
+  width: 100%;
+  max-width: 440px;
+  margin-inline: auto;
+}
 .video__caption {
   display: flex;
   flex-wrap: wrap;
@@ -1588,6 +1593,36 @@ a:hover { color: var(--navy); }
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-md);
   padding: var(--space-lg);
+}
+.bridge-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+@media (min-width: 600px) {
+  .bridge-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.bridge-audience-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius);
+  padding: var(--space-sm) var(--space-md);
+}
+.bridge-audience-card h4 {
+  font-family: var(--font-body);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin: 0 0 0.25rem 0;
+}
+.bridge-audience-card p {
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--ivory);
+  margin: 0;
 }
 .ticks--on-dark li {
   color: var(--ivory);

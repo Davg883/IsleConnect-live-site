@@ -284,7 +284,7 @@ def guard(paths):
 NAV = [
     ("explore.html",      "Explore"),
     ("journeys.html",     "Journeys"),
-    ("for-partners.html", "Work With Us"),
+    ("work-with-us.html", "Work With Us"),
     ("how-we-work.html",  "How We Work"),
     ("about.html",        "About"),
 ]
@@ -305,7 +305,7 @@ FOOTER_COLS = [
         ("partners/venues.html",        "Venues & businesses"),
         ("partners/organisations.html", "Community organisations"),
         ("consultancy.html",            "Consultancy & pilots"),
-        ("for-partners.html",           "Overview"),
+        ("work-with-us.html",           "Overview"),
     ]),
     ("IsleConnect", [
         ("about.html",         "About"),
@@ -326,7 +326,7 @@ def rel(path, depth):
     return ("../" * depth) + path
 
 
-def head(title, description, depth, page="page", story=None, trail=None, stop=None, extra_head=""):
+def head(title, description, depth, page="page", story=None, trail=None, stop=None, extra_head="", canonical_path="", og_image=None):
     """page/story/trail/stop become data-ic-* attributes on <body>, which is
     where the measurement layer reads its context from. See MEASUREMENT.md."""
     events = (f'\n<meta name="ic-events" content="{EVENTS_ENDPOINT}">'
@@ -339,6 +339,17 @@ def head(title, description, depth, page="page", story=None, trail=None, stop=No
     if stop:
         attrs += f' data-ic-stop="{stop}"'
     extra = f"\n{extra_head}" if extra_head else ""
+
+    base = SITE["base_url"].rstrip("/")
+    if canonical_path == "index.html" or canonical_path == "":
+        full_url = f"{base}/"
+    else:
+        full_url = f"{base}/{canonical_path.lstrip('/')}"
+
+    image_url = og_image if og_image else f"{base}/assets/img/card-ryde140.jpg"
+    if not image_url.startswith("http"):
+        image_url = f"{base}/{image_url.lstrip('/')}"
+
     return f"""<!DOCTYPE html>
 <html lang="en-GB">
 <head>
@@ -346,10 +357,16 @@ def head(title, description, depth, page="page", story=None, trail=None, stop=No
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title>
 <meta name="description" content="{description}">
+<link rel="canonical" href="{full_url}">
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{description}">
 <meta property="og:type" content="website">
-<meta property="og:image" content="{rel('assets/img/card-ryde140.jpg', depth)}">
+<meta property="og:url" content="{full_url}">
+<meta property="og:image" content="{image_url}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{description}">
+<meta name="twitter:image" content="{image_url}">
 <meta name="theme-color" content="#16243D">{events}
 <link rel="icon" href="{rel('favicon.ico', depth)}" sizes="48x48">
 <link rel="icon" type="image/png" href="{rel('assets/img/favicon-32.png', depth)}" sizes="32x32">
@@ -607,16 +624,29 @@ def video_block(slug, poster, label, note, depth, variant="720"):
 
     The transcript is part of the film, not part of the page that happens to
     embed it, so it is emitted here on every page the film appears."""
-    src = slug + ("-720" if variant == "720" else "") + ".mp4"
+    is_portrait = (slug == "town-hall")
+    video_cls = "video video--portrait" if is_portrait else "video"
+    width_attr = "720" if is_portrait else "1920"
+    height_attr = "1280" if is_portrait else "1080"
     track_elem = ""
     vtt_path = os.path.join(ROOT, "assets", "video", f"{slug}.vtt")
     if os.path.exists(vtt_path):
         track_elem = f'\n            <track kind="captions" src="{rel("assets/video/" + slug + ".vtt", depth)}" srclang="en" label="English" default>'
-    return f"""        <div class="video">
+
+    if slug == "town-hall":
+        # Stream 720p by default for fast mobile/desktop response, fall back to WebM and 1080p
+        sources = f"""            <source src="{rel('assets/video/town-hall-720.mp4', depth)}" type="video/mp4">
+            <source src="{rel('assets/video/town-hall-720.webm', depth)}" type="video/webm">
+            <source src="{rel('assets/video/town-hall.mp4', depth)}" type="video/mp4">"""
+    else:
+        src = slug + ("-720" if variant == "720" else "") + ".mp4"
+        sources = f"""            <source src="{rel('assets/video/' + src, depth)}" type="video/mp4">
+            <source src="{rel('assets/video/' + slug + '-720.webm', depth)}" type="video/webm">"""
+
+    return f"""        <div class="{video_cls}">
           <video controls preload="metadata" poster="{rel('assets/img/' + poster, depth)}"
-                 width="1920" height="1080" playsinline>
-            <source src="{rel('assets/video/' + src, depth)}" type="video/mp4">
-            <source src="{rel('assets/video/' + slug + '-720.webm', depth)}" type="video/webm">{track_elem}
+                 width="{width_attr}" height="{height_attr}" playsinline>
+{sources}{track_elem}
             Your browser cannot play this video.
           </video>
           <p class="video__caption"><b>{label}</b><span>{note}</span></p>
@@ -633,6 +663,19 @@ def write(path, html):
     d = os.path.dirname(full)
     if d:
         os.makedirs(d, exist_ok=True)
+
+    # If canonical was default ('https://www.isleconnect.co.uk/'), specialise it for this specific page
+    base = SITE["base_url"].rstrip("/")
+    if path != "index.html" and '<link rel="canonical" href="https://www.isleconnect.co.uk/">' in html:
+        target_url = f"{base}/{path.lstrip('/')}"
+        html = html.replace(
+            '<link rel="canonical" href="https://www.isleconnect.co.uk/">',
+            f'<link rel="canonical" href="{target_url}">'
+        ).replace(
+            '<meta property="og:url" content="https://www.isleconnect.co.uk/">',
+            f'<meta property="og:url" content="{target_url}">'
+        )
+
     with open(full, "w", encoding="utf-8") as f:
         f.write(html)
     print("wrote", path)
@@ -794,7 +837,7 @@ STORIES = {
         "sources": [
             ("Civic Architectural Records 1831–1869", "Architectural plans and municipal committee records for the original hall and Victorian expansion."),
             ("Ryde Jubilee & Civic Archive (1887)", "Photographs and press accounts of civic gatherings and celebrations."),
-            ("Edwardian Streetscape Drawing (c.1905)", "Architectural elevation and street drawing of Lind Street and Town Hall, Isle of Wight Local Studies Collection (IWLS-RD-1905-LIND-04)."),
+            ("Historic Streetscape Drawing", "Archival architectural elevation and street drawing of Lind Street and Town Hall (provenance and repository citation currently under review)."),
             ("Contemporary Site Survey & Photography", "Current photographic record of Lind Street, facade condition and architectural masonry."),
             ("Concept Visualisation Note", "Future gathering scene is an evidence-led concept visualisation to encourage discussion; no approved planning scheme is implied."),
         ],
@@ -810,7 +853,7 @@ STORIES = {
             "Visualisation of future civic gathering is an evidence-led conceptual interpretation; no approved scheme implied.",
         ],
         "nearby": None,
-        "marks": ("recon", "archive", "source"),
+        "marks": ("recon", "archive"),
     },
 }
 
@@ -873,7 +916,7 @@ def build_index():
           <p class="hero__sub">Explore the stories, places and people that shaped Ryde — then discover where to go next.</p>
           <div class="btn-row">
             <a class="btn btn--primary" href="explore.html">Explore the stories</a>
-            <a class="btn btn--ghost-light" href="for-partners.html">Work with us</a>
+            <a class="btn btn--ghost-light" href="work-with-us.html">Work with us</a>
           </div>
           {marks('recon', 'source')}
         </div>
@@ -937,13 +980,13 @@ def build_index():
             <div class="method-panel__media">
               <picture>
                 <source srcset="assets/img/method-archive-drawing.webp" type="image/webp">
-                <img src="assets/img/method-archive-drawing.jpg" alt="1905 archive drawing of Lind Street" width="600" height="375" loading="lazy">
+                <img src="assets/img/method-archive-drawing.jpg" alt="Archival streetscape drawing of Lind Street" width="600" height="375" loading="lazy">
               </picture>
-              <span class="method-panel__badge">Archive Drawing — 1905</span>
+              <span class="method-panel__badge">Archive Material — Provenance Under Review</span>
             </div>
             <div class="method-panel__body">
               <span class="method-panel__step">2. Archive Evidence</span>
-              <p class="method-panel__text">We unearth primary documents, historic municipal plans and documented Edwardian architectural drawings to anchor every historical detail in verifiable fact.</p>
+              <p class="method-panel__text">We unearth primary documents, historic municipal plans and archival drawings to ground each scene in authentic local character.</p>
             </div>
           </div>
 
@@ -1142,12 +1185,24 @@ def build_index():
       <div class="grid grid--2" style="margin-bottom:var(--space-lg); gap:var(--space-lg)">
         <div>
           <p>IsleConnect provides focused consultancy and small, measurable pilots for:</p>
-          <ul class="ticks ticks--on-dark">
-            <li><b>Independent businesses</b> seeking more discovery and customer action</li>
-            <li><b>Attractions</b> wanting a stronger before, during and after-visit experience</li>
-            <li><b>Community organisations</b> holding stories, archives or local knowledge</li>
-            <li><b>Places</b> looking to connect several venues into one useful journey</li>
-          </ul>
+          <div class="bridge-grid">
+            <div class="bridge-audience-card">
+              <h4>Independent businesses</h4>
+              <p>Seeking more discovery, walk-in interest and direct customer action.</p>
+            </div>
+            <div class="bridge-audience-card">
+              <h4>Visitor attractions</h4>
+              <p>Wanting a stronger before, during and after-visit story experience.</p>
+            </div>
+            <div class="bridge-audience-card">
+              <h4>Community organisations</h4>
+              <p>Holding stories, historical archives or valuable local knowledge.</p>
+            </div>
+            <div class="bridge-audience-card">
+              <h4>Towns &amp; partnerships</h4>
+              <p>Connecting multiple venues into one coherent, walkable route.</p>
+            </div>
+          </div>
         </div>
         <div class="bridge-card">
           <h3 style="color:var(--ivory)">Start small and measurable</h3>
@@ -1183,7 +1238,7 @@ def build_index():
         </div>
       </div>
       <div class="btn-row" style="margin-top:var(--space-lg)">
-        <a class="btn btn--primary" href="for-partners.html">Work with us</a>
+        <a class="btn btn--primary" href="work-with-us.html">Work with us</a>
       </div>
     </div>
   </section>
@@ -1234,7 +1289,7 @@ def build_index():
         <p>Ryde is where we are proving the model. The same approach can later bring books, attractions and destinations to life.</p>
         <div class="btn-row btn-row--centre">
           <a class="btn btn--primary" href="explore.html">Explore the stories</a>
-          <a class="btn btn--ghost-light" href="for-partners.html">Become a Ryde partner</a>
+          <a class="btn btn--ghost-light" href="work-with-us.html">Become a Ryde partner</a>
         </div>
       </div>
     </div>
@@ -1534,11 +1589,14 @@ def build_story(slug):
 </script>"""
 
     stop_no = next((st["n"] for st in TRAIL_STOPS if st["slug"] == slug and st["n"]), None)
+    og_img = f"assets/img/{s['poster']}" if s.get('poster') else None
     html = head(f'{s["title"]} — IsleConnect', s["line"], d,
                 page="story", story=slug,
                 trail=s["collection_href"].replace(".html", ""),
                 stop=stop_no,
-                extra_head=extra_head)
+                extra_head=extra_head,
+                canonical_path=f"ryde/{slug}.html",
+                og_image=og_img)
     html += header("journeys.html", d, over=True)
     # The transcript is emitted by video_block itself, so it travels with the
     # film to every page that embeds it. Nothing to add here.
@@ -1695,7 +1753,7 @@ def build_story(slug):
         <h2>Be part of the journey.</h2>
         <p>IsleConnect helps visitors discover the story around them — and gives nearby businesses and attractions a natural place in that journey.</p>
         <div class="btn-row btn-row--centre">
-          <a class="btn btn--primary" href="{rel('for-partners.html', d)}">Become a Ryde partner</a>
+          <a class="btn btn--primary" href="{rel('work-with-us.html', d)}">Become a Ryde partner</a>
         </div>
       </div>
     </div>
@@ -1903,7 +1961,7 @@ def build_partners():
     html = head("Work With Us — IsleConnect",
                 "Partnerships, consultancy and place activation across Ryde and the Isle of Wight.", d,
                 page="partners")
-    html += header("for-partners.html", d, over=True)
+    html += header("work-with-us.html", d, over=True)
     html += f"""
   <section class="hero hero--short">
     <div class="hero__media" aria-hidden="true">
@@ -2026,7 +2084,7 @@ def build_partners():
   </section>
 """
     html += footer(d)
-    write("for-partners.html", html)
+    write("work-with-us.html", html)
 
 
 PARTNER_PAGES = {
@@ -2094,11 +2152,11 @@ def build_partner_page(key):
 
 """
     html = head(f"{title} — IsleConnect", sub, d, page=f"partner-{key}")
-    html += header("for-partners.html", d)
+    html += header("work-with-us.html", d)
     html += f"""
   <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
     <div class="wrap">
-      <p class="crumb" style="color:var(--ink-muted)"><a href="{rel('for-partners.html', d)}" style="color:var(--ink-muted)">For partners</a> &nbsp;/&nbsp; {title}</p>
+      <p class="crumb" style="color:var(--ink-muted)"><a href="{rel('work-with-us.html', d)}" style="color:var(--ink-muted)">Work with us</a> &nbsp;/&nbsp; {title}</p>
       <div class="band__head">
         <span class="eyebrow">For partners</span>
         <h1>{title}</h1>
@@ -2167,7 +2225,7 @@ def build_consultancy():
         <div class="hero__content">
           <span class="eyebrow">Consultancy &amp; Pilots</span>
           <h1>Turn local attention into useful action.</h1>
-          <p class="hero__sub">We help destinations, attractions and independent businesses transform overlooked local stories into measurable discovery, footfall and customer visits.</p>
+          <p class="hero__sub">We help destinations, attractions and independent businesses connect overlooked local stories to measurable discovery, footfall routing and customer engagement.</p>
           <div class="btn-row">
             <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="enquiry_form_start">Book a 20-minute mapping call</a>
             <a class="btn btn--ghost-light" href="#pathways">View our pathways</a>
@@ -2207,12 +2265,12 @@ def build_consultancy():
           <div>
             <span class="eyebrow">Small Pilot</span>
             <h3>2. 30-Day Story-to-Footfall Pilot</h3>
-            <p>Prove the model on your doorstep with a controlled, measurable campaign connecting one verified story to customer visits.</p>
+            <p>Test the model on your doorstep with a focused, measurable campaign connecting an evidence-led story to customer visits.</p>
             <ul class="ticks" style="margin-top:var(--space-md)">
               <li>One evidence-led story &amp; high-impact short video</li>
               <li>Physical QR signage &amp; counter placement</li>
               <li>Direct onward routing to your venue or offer</li>
-              <li>Weekly engagement &amp; onward footfall metrics</li>
+              <li>Weekly engagement and onward journey reporting</li>
             </ul>
           </div>
           <div style="margin-top:var(--space-lg)">
@@ -2229,7 +2287,7 @@ def build_consultancy():
               <li>Curated walking trails linking complementary venues</li>
               <li>Shared visitor circulation &amp; dwell-time expansion</li>
               <li>Stakeholder governance &amp; rights clearance framework</li>
-              <li>Comprehensive footfall reporting across all stops</li>
+              <li>Measurable visitor journey reporting across all stops</li>
             </ul>
           </div>
           <div style="margin-top:var(--space-lg)">
@@ -2309,11 +2367,11 @@ def build_consultancy():
       <div class="grid grid--3">
         <div class="benefit">
           <h3>Human editorial control</h3>
-          <p>We believe in artificial intelligence as an accelerator for research and production, never as an unsupervised publisher. Every claim is checked against primary sources.</p>
+          <p>We believe in artificial intelligence as an accelerator for research and production, never as an unsupervised publisher. Historical and local statements are reviewed against documented evidence.</p>
         </div>
         <div class="benefit">
           <h3>Zero-app friction</h3>
-          <p>Visitors do not download apps for a 2-minute experience. Our stories load in under 1 second in any mobile browser via lightweight, accessible web standards.</p>
+          <p>Visitors do not download apps for a 2-minute experience. Our stories load cleanly in any modern mobile browser via lightweight, accessible web standards.</p>
         </div>
         <div class="benefit">
           <h3>Transparent outcomes</h3>
@@ -2400,7 +2458,7 @@ def build_about():
         <p>Three are live now. More are being built with the people who know them.</p>
         <div class="btn-row btn-row--centre">
           <a class="btn btn--primary" href="explore.html">Explore the stories</a>
-          <a class="btn btn--ghost-light" href="for-partners.html">Work with us</a>
+          <a class="btn btn--ghost-light" href="work-with-us.html">Work with us</a>
         </div>
       </div>
     </div>
@@ -2468,13 +2526,7 @@ def contact_route():
               <label for="diag-phone">Phone number (optional)</label>
               <input id="diag-phone" name="phone" type="tel" autocomplete="tel" placeholder="07123 456789">
             </div>
-            <div class="field">
-              <label class="option-label">
-                <input type="checkbox" name="permission" required checked>
-                <span>I am happy for IsleConnect to contact me about this enquiry.</span>
-              </label>
-            </div>
-            <p class="hint">We use what you send only to reply and discuss working together. See our <a href="privacy.html">privacy notice</a>.</p>
+            <p class="hint">We use what you send only to reply and discuss working together under legitimate interests. See our <a href="privacy.html">privacy notice</a>.</p>
             <div style="margin-top:var(--space-md)">
               <button class="btn btn--primary" type="submit">Request mapping conversation</button>
             </div>

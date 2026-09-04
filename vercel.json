@@ -16,8 +16,8 @@
       "permanent": true
     },
     {
-      "source": "/work-with-us.html",
-      "destination": "/for-partners.html",
+      "source": "/for-partners.html",
+      "destination": "/work-with-us.html",
       "permanent": true
     },
     {

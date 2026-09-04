@@ -109,7 +109,7 @@ class ReleaseGatesTest(unittest.TestCase):
         sources = [r["source"] for r in perm_redirects]
         self.assertIn("/for-venues.html", sources)
         self.assertIn("/for-creators.html", sources)
-        self.assertIn("/work-with-us.html", sources)
+        self.assertIn("/for-partners.html", sources)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
