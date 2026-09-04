@@ -46,6 +46,40 @@ pages = sorted(
     for f in glob.glob(os.path.join(ROOT, "**", "*.html"), recursive=True)
 )
 
+EXPECTED_PUBLIC_PAGES = [
+    "about.html",
+    "accessibility.html",
+    "consultancy.html",
+    "contact.html",
+    "explore.html",
+    "for-partners.html",
+    "how-we-work.html",
+    "index.html",
+    "journeys.html",
+    "partners/creators.html",
+    "partners/organisations.html",
+    "partners/venues.html",
+    "privacy.html",
+    "ryde-140.html",
+    "ryde/appley-tower.html",
+    "ryde/puckpool-battery.html",
+    "ryde/royal-victoria-arcade.html",
+    "ryde/ryde-pier.html",
+    "ryde/ryde-town-hall.html",
+    "ryde/seaview.html",
+    "ryde/union-street.html",
+    "terms.html",
+    "wartime-trail.html",
+]
+
+if pages != EXPECTED_PUBLIC_PAGES:
+    missing_pages = set(EXPECTED_PUBLIC_PAGES) - set(pages)
+    extra_pages = set(pages) - set(EXPECTED_PUBLIC_PAGES)
+    if missing_pages:
+        fail("2 manifest", f"Missing expected public pages: {sorted(missing_pages)}")
+    if extra_pages:
+        fail("2 manifest", f"Unexpected public pages found on disk: {sorted(extra_pages)}")
+
 
 # 2 · prohibited content against every generated page on disk
 B.guard(pages)

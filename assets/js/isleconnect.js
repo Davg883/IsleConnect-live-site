@@ -299,16 +299,18 @@
       var count = noteStory(id);
       track('story_started', count ? { sessionStoryCount: count } : null, video);
     });
-    video.addEventListener('ended', function () {
-      track('story_completed', null, video);
-      if (id === 'ryde-town-hall' || (video.currentSrc && video.currentSrc.indexOf('town-hall') > -1)) {
-        track('townhall_complete', null, video);
-      }
-    });
-    // Town Hall specific play tracking
+    var townhallCompleted = false;
     video.addEventListener('play', function () {
+      townhallCompleted = false; // Reset latch on fresh play
       if (id === 'ryde-town-hall' || (video.currentSrc && video.currentSrc.indexOf('town-hall') > -1)) {
         track('townhall_play', null, video);
+      }
+    });
+    video.addEventListener('ended', function () {
+      track('story_completed', null, video);
+      if ((id === 'ryde-town-hall' || (video.currentSrc && video.currentSrc.indexOf('town-hall') > -1)) && !townhallCompleted) {
+        townhallCompleted = true;
+        track('townhall_complete', null, video);
       }
     });
   });
@@ -352,33 +354,46 @@
           errEl.style.marginTop = 'var(--space-md)';
           diagForm.appendChild(errEl);
         }
-        errEl.innerHTML = '<b>Unable to send enquiry.</b> Please check your internet connection or email us directly at <a href="mailto:david@vectis.ai">david@vectis.ai</a>.';
+        errEl.innerHTML = '<b>Unable to send enquiry.</b> Please check your details or email us directly at <a href="mailto:david@isleconnect.co.uk">david@isleconnect.co.uk</a>.';
         errEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       };
 
-      var action = diagForm.getAttribute('action');
-      if (action && action.indexOf('http') === 0) {
-        try {
-          var formData = new FormData(diagForm);
-          window.fetch(action, {
-            method: 'POST',
-            body: formData,
-            headers: { 'Accept': 'application/json' }
-          }).then(function (res) {
-            if (res.ok) {
+      var action = diagForm.getAttribute('action') || '/api/enquiry';
+      var fallback = diagForm.getAttribute('data-fallback-action') || '';
+      var formData = new FormData(diagForm);
+
+      var trySubmit = function (url, isFallback) {
+        window.fetch(url, {
+          method: 'POST',
+          body: formData,
+          headers: { 'Accept': 'application/json' }
+        }).then(function (res) {
+          if (res.ok) {
+            showSuccess();
+          } else if (!isFallback && fallback && fallback.indexOf('http') === 0) {
+            // Try direct fallback endpoint
+            trySubmit(fallback, true);
+          } else {
+            showError();
+          }
+        }).catch(function () {
+          if (!isFallback && fallback && fallback.indexOf('http') === 0) {
+            trySubmit(fallback, true);
+          } else {
+            // If running on local static preview without backend, still show thank-you
+            if (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
               showSuccess();
             } else {
               showError();
             }
-          }).catch(function () {
-            showError();
-          });
-        } catch (err) {
-          showError();
-        }
-      } else {
-        // Local preview or endpoint not configured - show thank you directly
-        showSuccess();
+          }
+        });
+      };
+
+      try {
+        trySubmit(action, false);
+      } catch (err) {
+        showError();
       }
     });
   }

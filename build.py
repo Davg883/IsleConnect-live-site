@@ -794,6 +794,7 @@ STORIES = {
         "sources": [
             ("Civic Architectural Records 1831–1869", "Architectural plans and municipal committee records for the original hall and Victorian expansion."),
             ("Ryde Jubilee & Civic Archive (1887)", "Photographs and press accounts of civic gatherings and celebrations."),
+            ("Edwardian Streetscape Drawing (c.1905)", "Architectural elevation and street drawing of Lind Street and Town Hall, Isle of Wight Local Studies Collection (IWLS-RD-1905-LIND-04)."),
             ("Contemporary Site Survey & Photography", "Current photographic record of Lind Street, facade condition and architectural masonry."),
             ("Concept Visualisation Note", "Future gathering scene is an evidence-led concept visualisation to encourage discussion; no approved planning scheme is implied."),
         ],
@@ -938,11 +939,11 @@ def build_index():
                 <source srcset="assets/img/method-archive-drawing.webp" type="image/webp">
                 <img src="assets/img/method-archive-drawing.jpg" alt="1905 archive drawing of Lind Street" width="600" height="375" loading="lazy">
               </picture>
-              <span class="method-panel__badge">Archive Record</span>
+              <span class="method-panel__badge">Archive Drawing — 1905</span>
             </div>
             <div class="method-panel__body">
               <span class="method-panel__step">2. Archive Evidence</span>
-              <p class="method-panel__text">We unearth primary documents, historic municipal plans and eyewitness drawings to anchor every historical detail in verifiable fact.</p>
+              <p class="method-panel__text">We unearth primary documents, historic municipal plans and documented Edwardian architectural drawings to anchor every historical detail in verifiable fact.</p>
             </div>
           </div>
 
@@ -2372,7 +2373,7 @@ def build_about():
         <h2>Built from practical business experience</h2>
       </div>
       <div class="measure">
-        <p>IsleConnect is founded and directed in Ryde by <b>David Grannum</b>. It brings together over twenty years of building and operating real-world businesses with formal advanced training in artificial intelligence, including the Oxford Artificial Intelligence Programme and professional AI Solution Architect certifications.</p>
+        <p>IsleConnect is founded and directed in Ryde by <b>David Grannum</b>, working as an Applied AI Consultant. The practice brings together over twenty years of building and running commercial operations with advanced technical training, including the Oxford Artificial Intelligence Programme and professional AI Solution Architect certifications.</p>
         <p>Too much conversation around AI focuses either on speculative hype or automated generic content that ignores local reality. IsleConnect takes the opposite stance: practical, evidence-led systems where machine intelligence accelerates research, data structuring and visual reconstruction, while real people retain absolute authority over what is said and published.</p>
         <p>Every story, partnership and consultancy engagement is built on that foundation: rigorous provenance, respect for local creators, and clear commercial measurement.</p>
       </div>
@@ -2420,7 +2421,12 @@ def contact_route():
           <p>If you run a venue, manage an attraction, or hold local records, let's map where your visibility and visitor journey can improve quickly.</p>
           <p>Tell us a little about your business or project. A real person reviews every request and responds within one working day.</p>
 
-          <form class="diagnostic-form" method="post" action="{endpoint}">
+          <form class="diagnostic-form" method="post" action="/api/enquiry" data-fallback-action="{endpoint}">
+            <!-- Honeypot anti-spam field: hidden from humans, trips bot submissions -->
+            <div style="position:absolute; left:-9999px; top:-9999px" aria-hidden="true">
+              <label for="diag-hp">Leave this field blank</label>
+              <input id="diag-hp" name="_hp_company" type="text" tabindex="-1" autocomplete="off">
+            </div>
             <div class="field">
               <label for="diag-name">Your name *</label>
               <input id="diag-name" name="name" type="text" autocomplete="name" required placeholder="e.g. Jane Smith">

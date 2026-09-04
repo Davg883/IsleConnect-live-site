@@ -62,7 +62,12 @@
           <p>If you run a venue, manage an attraction, or hold local records, let's map where your visibility and visitor journey can improve quickly.</p>
           <p>Tell us a little about your business or project. A real person reviews every request and responds within one working day.</p>
 
-          <form class="diagnostic-form" method="post" action="https://formspree.io/f/xvgowwzn">
+          <form class="diagnostic-form" method="post" action="/api/enquiry" data-fallback-action="https://formspree.io/f/xvgowwzn">
+            <!-- Honeypot anti-spam field: hidden from humans, trips bot submissions -->
+            <div style="position:absolute; left:-9999px; top:-9999px" aria-hidden="true">
+              <label for="diag-hp">Leave this field blank</label>
+              <input id="diag-hp" name="_hp_company" type="text" tabindex="-1" autocomplete="off">
+            </div>
             <div class="field">
               <label for="diag-name">Your name *</label>
               <input id="diag-name" name="name" type="text" autocomplete="name" required placeholder="e.g. Jane Smith">
