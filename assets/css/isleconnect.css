@@ -1786,3 +1786,179 @@ a:hover { color: var(--navy); }
   margin-bottom: 0;
 }
 
+/* --------------------------------------------------------------------------
+   46. Card Checklist & Pricing Packages
+   -------------------------------------------------------------------------- */
+
+/* Ensure ticks on ivory / benefit backgrounds don't inherit dark-mode defaults */
+.band--ivory .ticks,
+.band--ivory-deep .ticks,
+.benefit .ticks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
+}
+.band--ivory .ticks li,
+.band--ivory-deep .ticks li,
+.benefit .ticks li {
+  color: var(--ink);
+  border-top: 1px solid var(--rule);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+.band--ivory .ticks li::before,
+.band--ivory-deep .ticks li::before,
+.benefit .ticks li::before {
+  color: var(--teal);
+}
+
+/* Reusable card checklist */
+.card-checklist {
+  list-style: none;
+  margin: var(--space-md) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.card-checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.93rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.card-checklist li::before {
+  content: "✓";
+  color: var(--teal);
+  font-weight: 700;
+  font-size: 1.1em;
+  flex-shrink: 0;
+  margin-top: -0.05em;
+}
+.card-checklist--2col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem 1.25rem;
+}
+@media (min-width: 680px) {
+  .card-checklist--2col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Pricing Grid & Cards */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+  margin-top: var(--space-lg);
+}
+@media (min-width: 768px) {
+  .pricing-grid--2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .pricing-grid--3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.pricing-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--rule);
+  padding: clamp(1.4rem, 1rem + 1.5vw, 2.2rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 18px rgba(22, 36, 61, 0.05);
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.pricing-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(22, 36, 61, 0.09);
+}
+.pricing-card--featured {
+  border: 2px solid var(--teal);
+  box-shadow: 0 6px 24px rgba(31, 122, 128, 0.12);
+}
+.pricing-card__badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--teal);
+  background: rgba(31, 122, 128, 0.1);
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius);
+  margin-bottom: var(--space-xs);
+}
+.pricing-card--featured .pricing-card__badge {
+  background: var(--teal);
+  color: var(--white);
+}
+.pricing-card__title {
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+  color: var(--navy);
+  margin: 0 0 0.4rem 0;
+  line-height: 1.25;
+}
+.pricing-card__price {
+  font-size: clamp(1.45rem, 1.2rem + 0.8vw, 2rem);
+  font-weight: 800;
+  color: var(--navy);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+.pricing-card__price-sub {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+.pricing-card__sub {
+  font-size: 0.93rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  margin-bottom: 0.75rem;
+}
+.pricing-card__callout {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--teal);
+  background: rgba(31, 122, 128, 0.06);
+  border-left: 3px solid var(--teal);
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0 var(--space-sm) 0;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.pricing-card__heading {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--navy);
+  margin: 0.75rem 0 0.3rem 0;
+}
+.pricing-card__note {
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: var(--ink-muted);
+  font-style: italic;
+  margin-top: var(--space-sm);
+  padding-top: var(--space-xs);
+  border-top: 1px dashed var(--rule);
+}
+.pricing-card__footer {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-sm);
+}
+
+
