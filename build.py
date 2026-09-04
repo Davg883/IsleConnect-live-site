@@ -822,10 +822,10 @@ STORIES = {
         "video_note": "Evidence-led AI reconstruction & concept visualisation",
         "story": [
             "Follow Ryde Town Hall from its opening in 1831, through civic expansion, celebration and community life, into closure — and a future that has not yet been written.",
-            "Opening in 1831 with its grand neoclassical columned frontage on Lind Street, Ryde Town Hall served as the civic beating heart of the town for generations.",
-            "In 1867–69, the hall expanded with an imposing clock tower and municipal chambers. By 1887, it stood at the centre of Queen Victoria's Golden Jubilee festivities.",
-            "Through decades of dances, concerts and public meetings, the hall was where Ryde gathered. Following closure in the early 21st century, the building fell quiet.",
-            "Today, community initiatives and imaginative stewardship are asking what this familiar corner could become. The future visualised here is a conceptual interpretation to spark local conversation.",
+            "Opening in 1831 with its neoclassical columned frontage on Lind Street, Ryde Town Hall was planned as the civic centre of the expanding resort. Independent historical specialist review remains pending under our Phase G.3 governance framework; accounts reflect documented municipal records.",
+            "According to Borough of Ryde municipal committee minutes, the hall was enlarged in 1867–69 with council chambers and an imposing clock tower. Contemporary press accounts record extensive civic celebrations for Queen Victoria's Golden Jubilee in June 1887.",
+            "Through decades of dances, concerts and public meetings, the hall was where Ryde gathered. Local municipal records document that the hall ceased regular civic use and closed in the early 21st century.",
+            "Today, community initiatives and imaginative stewardship are asking what this familiar corner could become. The future visualised here is an evidence-led conceptual interpretation to spark local conversation.",
         ],
         "visit": [
             ("Where", "Lind Street, Ryde"),
@@ -835,8 +835,8 @@ STORIES = {
             ("Time needed", "10 minutes to take in the architecture, film and historic timeline."),
         ],
         "sources": [
-            ("Civic Architectural Records 1831–1869", "Architectural plans and municipal committee records for the original hall and Victorian expansion."),
-            ("Ryde Jubilee & Civic Archive (1887)", "Photographs and press accounts of civic gatherings and celebrations."),
+            ("Civic Architectural Records 1831–1869", "Architectural plans and municipal committee records for the original hall and Victorian expansion (historical specialist review pending)."),
+            ("Ryde Jubilee & Civic Archive (1887)", "Photographs and press accounts of civic gatherings and celebrations in contemporary local newspapers."),
             ("Historic Streetscape Drawing", "Archival architectural elevation and street drawing of Lind Street and Town Hall (provenance and repository citation currently under review)."),
             ("Contemporary Site Survey & Photography", "Current photographic record of Lind Street, facade condition and architectural masonry."),
             ("Concept Visualisation Note", "Future gathering scene is an evidence-led concept visualisation to encourage discussion; no approved planning scheme is implied."),
@@ -966,7 +966,7 @@ def build_index():
             <div class="method-panel__media">
               <picture>
                 <source srcset="assets/img/method-present-day.webp" type="image/webp">
-                <img src="assets/img/method-present-day.jpg" alt="Ryde Town Hall present day street view" width="600" height="375" loading="lazy">
+                <img src="assets/img/method-present-day.jpg" alt="Present day view of Royal Victoria Arcade interior rotunda" width="600" height="375" loading="lazy">
               </picture>
               <span class="method-panel__badge">Present Day</span>
             </div>
@@ -980,13 +980,13 @@ def build_index():
             <div class="method-panel__media">
               <picture>
                 <source srcset="assets/img/method-archive-drawing.webp" type="image/webp">
-                <img src="assets/img/method-archive-drawing.jpg" alt="Archival streetscape drawing of Lind Street" width="600" height="375" loading="lazy">
+                <img src="assets/img/method-archive-drawing.jpg" alt="Original 1837 archival architectural engraving of Royal Victoria Arcade" width="600" height="375" loading="lazy">
               </picture>
-              <span class="method-panel__badge">Archive Material — Provenance Under Review</span>
+              <span class="method-panel__badge">Archive Evidence — 1837</span>
             </div>
             <div class="method-panel__body">
               <span class="method-panel__step">2. Archive Evidence</span>
-              <p class="method-panel__text">We unearth primary documents, historic municipal plans and archival drawings to ground each scene in authentic local character.</p>
+              <p class="method-panel__text">We unearth primary documents, historic municipal plans and archival engravings to ground each scene in authentic local character.</p>
             </div>
           </div>
 
@@ -994,7 +994,7 @@ def build_index():
             <div class="method-panel__media">
               <picture>
                 <source srcset="assets/img/method-ai-interpretation.webp" type="image/webp">
-                <img src="assets/img/method-ai-interpretation.jpg" alt="Visualised historic scene in front of Ryde Town Hall" width="600" height="375" loading="lazy">
+                <img src="assets/img/method-ai-interpretation.jpg" alt="Evidence-led digital reconstruction of Royal Victoria Arcade c.1837" width="600" height="375" loading="lazy">
               </picture>
               <span class="method-panel__badge">AI-Assisted Interpretation</span>
             </div>
@@ -1627,18 +1627,21 @@ def build_story(slug):
         extra_townhall_block = f"""    <section class="exp-section">
       <span class="eyebrow">Timeline</span>
       <h2>Nearly two centuries at a glance</h2>
+      <p class="notice notice--public" style="margin-bottom:var(--space-md)">
+        <b>Evidential note:</b> Independent specialist historical review is currently pending under our Phase G.3 governance framework. Chronological details and civic accounts below reflect documented municipal minutes, press archives and architectural surveys currently undergoing formal evaluation.
+      </p>
       <div class="timeline">
         <div class="timeline__beat">
           <div class="timeline__year">1831</div>
-          <div class="timeline__desc">Ryde Town Hall opens with its grand neoclassical columned frontage on Lind Street, establishing a proud civic identity.</div>
+          <div class="timeline__desc">Ryde Town Hall opens with its neoclassical columned frontage on Lind Street, establishing a civic presence for the seaside resort.</div>
         </div>
         <div class="timeline__beat">
           <div class="timeline__year">1867–69</div>
-          <div class="timeline__desc">Municipal expansion adds an imposing clock tower and council chambers as Ryde flourishes as a seaside borough.</div>
+          <div class="timeline__desc">Municipal extension committee records document enlargement including the landmark clock tower and council chambers.</div>
         </div>
         <div class="timeline__beat">
           <div class="timeline__year">1887</div>
-          <div class="timeline__desc">Civic celebrations for Queen Victoria's Golden Jubilee centre on the Town Hall with community processions and illuminations.</div>
+          <div class="timeline__desc">Contemporary local press accounts record civic celebrations and community gatherings for Queen Victoria's Golden Jubilee.</div>
         </div>
         <div class="timeline__beat">
           <div class="timeline__year">Entertainment Era</div>
@@ -1646,7 +1649,7 @@ def build_story(slug):
         </div>
         <div class="timeline__beat">
           <div class="timeline__year">Closure</div>
-          <div class="timeline__desc">Municipal reorganization and rising maintenance costs lead to the hall's closure in the early 21st century. The doors fall quiet.</div>
+          <div class="timeline__desc">Municipal reorganization and maintenance challenges lead to the hall's closure in the early 21st century. The doors fall quiet.</div>
         </div>
         <div class="timeline__beat">
           <div class="timeline__year">Future Possibility</div>
@@ -2375,7 +2378,7 @@ def build_consultancy():
         </div>
         <div class="benefit">
           <h3>Transparent outcomes</h3>
-          <p>We measure genuine public interest: video views, transcript reads, onward footfall and venue visits — without privacy-invasive surveillance or profiling.</p>
+          <p>We are preparing to measure video engagement, transcript use, onward actions and visitor routing without profiling individual visitors.</p>
         </div>
       </div>
     </div>
@@ -2431,7 +2434,7 @@ def build_about():
         <h2>Built from practical business experience</h2>
       </div>
       <div class="measure">
-        <p>IsleConnect is founded and directed in Ryde by <b>David Grannum</b>, working as an Applied AI Consultant. The practice brings together over twenty years of building and running commercial operations with advanced technical training, including the Oxford Artificial Intelligence Programme and professional AI Solution Architect certifications.</p>
+        <p>IsleConnect is founded and directed in Ryde by <b>David Grannum</b>, working as an Applied AI Consultant. The practice brings together over twenty years of building and running commercial operations with advanced technical training, including the Oxford Artificial Intelligence Programme and advanced AI Solution Architect training.</p>
         <p>Too much conversation around AI focuses either on speculative hype or automated generic content that ignores local reality. IsleConnect takes the opposite stance: practical, evidence-led systems where machine intelligence accelerates research, data structuring and visual reconstruction, while real people retain absolute authority over what is said and published.</p>
         <p>Every story, partnership and consultancy engagement is built on that foundation: rigorous provenance, respect for local creators, and clear commercial measurement.</p>
       </div>
@@ -2557,7 +2560,7 @@ def contact_route():
           <div class="measure" style="margin-top:var(--space-xl)">
             <h3>Our commitment</h3>
             <p>We do not use high-pressure sales. We will tell you frankly whether your venue or project is a good fit for IsleConnect, what can be accomplished quickly, and what is best left alone.</p>
-            <p>Your details are kept strictly confidential and never sold or shared. See our <a href="privacy.html">privacy notice</a>.</p>
+            <p>Your details are never sold. They are shared only with contracted service providers where necessary to handle your enquiry. See our <a href="privacy.html">privacy notice</a>.</p>
           </div>
         </div>
       </div>

@@ -40,6 +40,19 @@
           "value": "no-store, max-age=0"
         }
       ]
+    },
+    {
+      "source": "/assets/video/(.*)\\.vtt",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/vtt; charset=utf-8"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
     }
   ]
 }
