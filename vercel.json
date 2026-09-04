@@ -16,8 +16,8 @@
       "permanent": true
     },
     {
-      "source": "/work-with-us.html",
-      "destination": "/for-partners.html",
+      "source": "/for-partners.html",
+      "destination": "/work-with-us.html",
       "permanent": true
     },
     {
@@ -38,6 +38,19 @@
         {
           "key": "Cache-Control",
           "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/assets/video/(.*)\\.vtt",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/vtt; charset=utf-8"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
         }
       ]
     }

@@ -154,7 +154,17 @@
     'menu_clicked',
     'booking_clicked',
     'trail_selected',
-    'sponsor_enquiry'
+    'sponsor_enquiry',
+    'townhall_play',
+    'townhall_complete',
+    'townhall_source_open',
+    'consultancy_view',
+    'visibility_review_click',
+    'pilot_enquiry_click',
+    'enquiry_form_start',
+    'enquiry_form_submit',
+    'enquiry_form_error',
+    'mapping_call_booked'
   ];
 
   var endpointMeta = document.querySelector('meta[name="ic-events"]');
@@ -289,10 +299,104 @@
       var count = noteStory(id);
       track('story_started', count ? { sessionStoryCount: count } : null, video);
     });
+    var townhallCompleted = false;
+    video.addEventListener('play', function () {
+      townhallCompleted = false; // Reset latch on fresh play
+      if (id === 'ryde-town-hall' || (video.currentSrc && video.currentSrc.indexOf('town-hall') > -1)) {
+        track('townhall_play', null, video);
+      }
+    });
     video.addEventListener('ended', function () {
       track('story_completed', null, video);
+      if ((id === 'ryde-town-hall' || (video.currentSrc && video.currentSrc.indexOf('town-hall') > -1)) && !townhallCompleted) {
+        townhallCompleted = true;
+        track('townhall_complete', null, video);
+      }
     });
   });
+
+  // Town Hall source notes tracking
+  document.querySelectorAll('details.source-notes').forEach(function (dt) {
+    dt.addEventListener('toggle', function () {
+      if (dt.open) track('townhall_source_open', null, dt);
+    });
+  });
+
+  // Diagnostic mapping conversation form handling
+  var diagForm = document.querySelector('.diagnostic-form');
+  if (diagForm) {
+    var formStarted = false;
+    diagForm.addEventListener('focusin', function () {
+      if (!formStarted) {
+        formStarted = true;
+        track('enquiry_form_start', null, diagForm);
+      }
+    });
+    diagForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      var showSuccess = function () {
+        track('enquiry_form_submit', null, diagForm);
+        diagForm.style.display = 'none';
+        var thankYou = document.getElementById('enquiry-thank-you');
+        if (thankYou) {
+          thankYou.style.display = 'block';
+          thankYou.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      };
+
+      var showError = function () {
+        track('enquiry_form_error', null, diagForm);
+        var errEl = diagForm.querySelector('.form-error-notice');
+        if (!errEl) {
+          errEl = document.createElement('div');
+          errEl.className = 'notice notice--alert form-error-notice';
+          errEl.style.marginTop = 'var(--space-md)';
+          diagForm.appendChild(errEl);
+        }
+        errEl.innerHTML = '<b>Unable to send enquiry.</b> Please check your details or email us directly at <a href="mailto:david@isleconnect.co.uk">david@isleconnect.co.uk</a>.';
+        errEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      };
+
+      var action = diagForm.getAttribute('action') || '/api/enquiry';
+      var fallback = diagForm.getAttribute('data-fallback-action') || '';
+      var formData = new FormData(diagForm);
+
+      var trySubmit = function (url, isFallback) {
+        window.fetch(url, {
+          method: 'POST',
+          body: formData,
+          headers: { 'Accept': 'application/json' }
+        }).then(function (res) {
+          if (res.ok) {
+            showSuccess();
+          } else if (!isFallback && fallback && fallback.indexOf('http') === 0) {
+            // Try direct fallback endpoint
+            trySubmit(fallback, true);
+          } else {
+            showError();
+          }
+        }).catch(function () {
+          if (!isFallback && fallback && fallback.indexOf('http') === 0) {
+            trySubmit(fallback, true);
+          } else {
+            // If running on local static preview without backend, still show thank-you
+            if (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+              showSuccess();
+            } else {
+              showError();
+            }
+          }
+        });
+      };
+
+      try {
+        trySubmit(action, false);
+      } catch (err) {
+        showError();
+      }
+    });
+  }
 
   // Explicit intent, declared in the markup.
   document.addEventListener('click', function (e) {

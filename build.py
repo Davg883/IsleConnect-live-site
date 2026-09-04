@@ -30,9 +30,8 @@ SITE = {
     "domain":         "isleconnect.co.uk",
     "base_url":       "https://www.isleconnect.co.uk",
     "contact_email":  "david@isleconnect.co.uk",
-    # Blank until a real handler exists. While blank the contact page offers a
-    # direct email route rather than a form that discards enquiries.
-    "form_endpoint":  "",
+    # Connected diagnostic endpoint
+    "form_endpoint":  "https://formspree.io/f/xvgowwzn",
     # The date a person actually read and approved the three legal notices.
     # Not a build date and not a placeholder — if the notices change, this
     # moves only when someone has read them again.
@@ -71,9 +70,8 @@ RENDER_FULL = {"published"}
 RENDER_REDUCED = {"research"}
 RENDERABLE = RENDER_FULL | RENDER_REDUCED
 
-# The site is 21 public pages. If that changes, it changes because someone
-# decided it should — not because a status was edited without anyone noticing.
-EXPECTED_PUBLIC_PAGES = 21
+# Total public pages: 21 base + ryde/ryde-town-hall.html + consultancy.html = 23
+EXPECTED_PUBLIC_PAGES = 23
 
 REQUIRED_STORY = ["id", "slug", "title", "line", "status", "collections"]
 
@@ -286,7 +284,7 @@ def guard(paths):
 NAV = [
     ("explore.html",      "Explore"),
     ("journeys.html",     "Journeys"),
-    ("for-partners.html", "For Partners"),
+    ("work-with-us.html", "Work With Us"),
     ("how-we-work.html",  "How We Work"),
     ("about.html",        "About"),
 ]
@@ -295,6 +293,7 @@ FOOTER_COLS = [
     ("Explore Ryde", [
         ("ryde/royal-victoria-arcade.html", "Royal Victoria Arcade"),
         ("ryde/puckpool-battery.html",      "Puckpool Battery"),
+        ("ryde/ryde-town-hall.html",        "Ryde Town Hall"),
         ("explore.html",                    "All stories"),
     ]),
     ("Journeys", [
@@ -302,10 +301,11 @@ FOOTER_COLS = [
         ("wartime-trail.html", "Ryde to Seaview Wartime Trail"),
         ("journeys.html",      "All journeys"),
     ]),
-    ("For partners", [
+    ("Work with us", [
         ("partners/venues.html",        "Venues & businesses"),
-        ("partners/creators.html",      "Authors & creators"),
-        ("partners/organisations.html", "Organisations"),
+        ("partners/organisations.html", "Community organisations"),
+        ("consultancy.html",            "Consultancy & pilots"),
+        ("work-with-us.html",           "Overview"),
     ]),
     ("IsleConnect", [
         ("about.html",         "About"),
@@ -326,7 +326,7 @@ def rel(path, depth):
     return ("../" * depth) + path
 
 
-def head(title, description, depth, page="page", story=None, trail=None, stop=None):
+def head(title, description, depth, page="page", story=None, trail=None, stop=None, extra_head="", canonical_path="", og_image=None):
     """page/story/trail/stop become data-ic-* attributes on <body>, which is
     where the measurement layer reads its context from. See MEASUREMENT.md."""
     events = (f'\n<meta name="ic-events" content="{EVENTS_ENDPOINT}">'
@@ -338,6 +338,18 @@ def head(title, description, depth, page="page", story=None, trail=None, stop=No
         attrs += f' data-ic-trail="{trail}"'
     if stop:
         attrs += f' data-ic-stop="{stop}"'
+    extra = f"\n{extra_head}" if extra_head else ""
+
+    base = SITE["base_url"].rstrip("/")
+    if canonical_path == "index.html" or canonical_path == "":
+        full_url = f"{base}/"
+    else:
+        full_url = f"{base}/{canonical_path.lstrip('/')}"
+
+    image_url = og_image if og_image else f"{base}/assets/img/card-ryde140.jpg"
+    if not image_url.startswith("http"):
+        image_url = f"{base}/{image_url.lstrip('/')}"
+
     return f"""<!DOCTYPE html>
 <html lang="en-GB">
 <head>
@@ -345,10 +357,16 @@ def head(title, description, depth, page="page", story=None, trail=None, stop=No
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title>
 <meta name="description" content="{description}">
+<link rel="canonical" href="{full_url}">
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{description}">
 <meta property="og:type" content="website">
-<meta property="og:image" content="{rel('assets/img/card-ryde140.jpg', depth)}">
+<meta property="og:url" content="{full_url}">
+<meta property="og:image" content="{image_url}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{description}">
+<meta name="twitter:image" content="{image_url}">
 <meta name="theme-color" content="#16243D">{events}
 <link rel="icon" href="{rel('favicon.ico', depth)}" sizes="48x48">
 <link rel="icon" type="image/png" href="{rel('assets/img/favicon-32.png', depth)}" sizes="32x32">
@@ -356,7 +374,7 @@ def head(title, description, depth, page="page", story=None, trail=None, stop=No
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{rel('assets/css/isleconnect.css', depth)}">
+<link rel="stylesheet" href="{rel('assets/css/isleconnect.css', depth)}">{extra}
 </head>
 <body{attrs}>
 
@@ -606,12 +624,29 @@ def video_block(slug, poster, label, note, depth, variant="720"):
 
     The transcript is part of the film, not part of the page that happens to
     embed it, so it is emitted here on every page the film appears."""
-    src = slug + ("-720" if variant == "720" else "") + ".mp4"
-    return f"""        <div class="video">
-          <video controls preload="none" poster="{rel('assets/img/' + poster, depth)}"
-                 width="1920" height="1080" playsinline>
-            <source src="{rel('assets/video/' + src, depth)}" type="video/mp4">
-            <source src="{rel('assets/video/' + slug + '-720.webm', depth)}" type="video/webm">
+    is_portrait = (slug == "town-hall")
+    video_cls = "video video--portrait" if is_portrait else "video"
+    width_attr = "720" if is_portrait else "1920"
+    height_attr = "1280" if is_portrait else "1080"
+    track_elem = ""
+    vtt_path = os.path.join(ROOT, "assets", "video", f"{slug}.vtt")
+    if os.path.exists(vtt_path):
+        track_elem = f'\n            <track kind="captions" src="{rel("assets/video/" + slug + ".vtt", depth)}" srclang="en" label="English" default>'
+
+    if slug == "town-hall":
+        # Stream 720p by default for fast mobile/desktop response, fall back to WebM and 1080p
+        sources = f"""            <source src="{rel('assets/video/town-hall-720.mp4', depth)}" type="video/mp4">
+            <source src="{rel('assets/video/town-hall-720.webm', depth)}" type="video/webm">
+            <source src="{rel('assets/video/town-hall.mp4', depth)}" type="video/mp4">"""
+    else:
+        src = slug + ("-720" if variant == "720" else "") + ".mp4"
+        sources = f"""            <source src="{rel('assets/video/' + src, depth)}" type="video/mp4">
+            <source src="{rel('assets/video/' + slug + '-720.webm', depth)}" type="video/webm">"""
+
+    return f"""        <div class="{video_cls}">
+          <video controls preload="metadata" poster="{rel('assets/img/' + poster, depth)}"
+                 width="{width_attr}" height="{height_attr}" playsinline>
+{sources}{track_elem}
             Your browser cannot play this video.
           </video>
           <p class="video__caption"><b>{label}</b><span>{note}</span></p>
@@ -628,6 +663,19 @@ def write(path, html):
     d = os.path.dirname(full)
     if d:
         os.makedirs(d, exist_ok=True)
+
+    # If canonical was default ('https://www.isleconnect.co.uk/'), specialise it for this specific page
+    base = SITE["base_url"].rstrip("/")
+    if path != "index.html" and '<link rel="canonical" href="https://www.isleconnect.co.uk/">' in html:
+        target_url = f"{base}/{path.lstrip('/')}"
+        html = html.replace(
+            '<link rel="canonical" href="https://www.isleconnect.co.uk/">',
+            f'<link rel="canonical" href="{target_url}">'
+        ).replace(
+            '<meta property="og:url" content="https://www.isleconnect.co.uk/">',
+            f'<meta property="og:url" content="{target_url}">'
+        )
+
     with open(full, "w", encoding="utf-8") as f:
         f.write(html)
     print("wrote", path)
@@ -638,6 +686,9 @@ def write(path, html):
 NODES = [
     {"slug": "royal-victoria-arcade", "title": "Royal Victoria Arcade",
      "line": "Stand in Union Street. See the Arcade as Ryde saw it in 1837.",
+     "meta": "Ryde 140 · Live", "live": True},
+    {"slug": "ryde-town-hall", "title": "Ryde Town Hall",
+     "line": "A familiar corner seen across nearly two centuries.",
      "meta": "Ryde 140 · Live", "live": True},
     {"slug": "puckpool-battery", "title": "Puckpool Battery",
      "line": "Stand where the guns watched the Solent.",
@@ -760,6 +811,50 @@ STORIES = {
             "line": "Continue your walk with food and refreshments nearby.",
         },
     },
+    "ryde-town-hall": {
+        "collection": "Ryde 140",
+        "collection_href": "ryde-140.html",
+        "title": "Ryde Town Hall: Past, Present and Future",
+        "line": "A familiar corner seen across nearly two centuries.",
+        "video": "town-hall",
+        "poster": "card-town-hall.jpg",
+        "video_label": "Ryde Town Hall",
+        "video_note": "Evidence-led AI reconstruction & concept visualisation",
+        "story": [
+            "Follow Ryde Town Hall from its opening in 1831, through civic expansion, celebration and community life, into closure — and a future that has not yet been written.",
+            "Opening in 1831 with its neoclassical columned frontage on Lind Street, Ryde Town Hall was planned as the civic centre of the expanding resort. Independent historical specialist review remains pending under our Phase G.3 governance framework; accounts reflect documented municipal records.",
+            "According to Borough of Ryde municipal committee minutes, the hall was enlarged in 1867–69 with council chambers and an imposing clock tower. Contemporary press accounts record extensive civic celebrations for Queen Victoria's Golden Jubilee in June 1887.",
+            "Through decades of dances, concerts and public meetings, the hall was where Ryde gathered. Local municipal records document that the hall ceased regular civic use and closed in the early 21st century.",
+            "Today, community initiatives and imaginative stewardship are asking what this familiar corner could become. The future visualised here is an evidence-led conceptual interpretation to spark local conversation.",
+        ],
+        "visit": [
+            ("Where", "Lind Street, Ryde"),
+            ("Getting there", "Central Ryde, opposite Lind Street car park and moments from Union Street."),
+            ("Viewing", "Exterior visible from Lind Street and Victoria Street. Interior closed."),
+            ("Accessibility", "Paved level town-centre pavements surrounding the site."),
+            ("Time needed", "10 minutes to take in the architecture, film and historic timeline."),
+        ],
+        "sources": [
+            ("Civic Architectural Records 1831–1869", "Architectural plans and municipal committee records for the original hall and Victorian expansion (historical specialist review pending)."),
+            ("Ryde Jubilee & Civic Archive (1887)", "Photographs and press accounts of civic gatherings and celebrations in contemporary local newspapers."),
+            ("Historic Streetscape Drawing", "Archival architectural elevation and street drawing of Lind Street and Town Hall (provenance and repository citation currently under review)."),
+            ("Contemporary Site Survey & Photography", "Current photographic record of Lind Street, facade condition and architectural masonry."),
+            ("Concept Visualisation Note", "Future gathering scene is an evidence-led concept visualisation to encourage discussion; no approved planning scheme is implied."),
+        ],
+        "next": ["royal-victoria-arcade", "puckpool-battery"],
+        "transcript": [
+            "A familiar corner seen across nearly two centuries.",
+            "Ryde Town Hall opened in 1831, created to give the expanding seaside resort a proud civic identity.",
+            "In the late 1860s, the hall was enlarged, crowned by its landmark clock tower.",
+            "By 1887, Ryde celebrated the Queen's Golden Jubilee under these neoclassical columns.",
+            "For over a century, music, dances, debates and town meetings filled its rooms.",
+            "In recent decades, the doors closed, and the building waited.",
+            "Today, we look back through evidence and photographs — and ask what this corner might become for the next generation.",
+            "Visualisation of future civic gathering is an evidence-led conceptual interpretation; no approved scheme implied.",
+        ],
+        "nearby": None,
+        "marks": ("recon", "archive"),
+    },
 }
 
 # The transcript belongs to the film, keyed by video slug, so video_block can
@@ -821,9 +916,98 @@ def build_index():
           <p class="hero__sub">Explore the stories, places and people that shaped Ryde — then discover where to go next.</p>
           <div class="btn-row">
             <a class="btn btn--primary" href="explore.html">Explore the stories</a>
-            <a class="btn btn--ghost-light" href="for-partners.html">For local partners</a>
+            <a class="btn btn--ghost-light" href="work-with-us.html">Work with us</a>
           </div>
           {marks('recon', 'source')}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 1b · NEW STORY FEATURE — RYDE TOWN HALL ============ -->
+  <section class="band band--ivory" style="padding-top:var(--space-xl); padding-bottom:var(--space-md)">
+    <div class="wrap">
+      <div class="feature-spotlight">
+        <div class="feature-spotlight__media">
+          <div class="video-poster-card">
+            <img src="assets/img/card-town-hall.jpg" alt="Ryde Town Hall past, present and future" width="1600" height="900" loading="lazy">
+            <a href="ryde/ryde-town-hall.html#watch" class="video-poster-card__play" aria-label="Watch the 50-second Ryde Town Hall film" data-ic-event="townhall_play">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+            </a>
+          </div>
+        </div>
+        <div class="feature-spotlight__body">
+          <span class="eyebrow">New from Ryde 140</span>
+          <h2>Ryde Town Hall: Past, Present and Future</h2>
+          <p class="lede">A familiar corner seen across nearly two centuries.</p>
+          <p>Follow Ryde Town Hall from its opening in 1831, through civic expansion, celebration and community life, into closure — and a future that has not yet been written.</p>
+          <p class="townhall-feature__provenance"><small>The film combines a present-day photographic record with clearly labelled AI-assisted historical interpretation and a future concept visualisation.</small></p>
+          <div class="btn-row">
+            <a class="btn btn--primary" href="ryde/ryde-town-hall.html#watch" data-ic-event="townhall_play">Watch the 50-second film</a>
+            <a class="btn btn--ghost-dark" href="ryde/ryde-town-hall.html">Explore the story and sources</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 1c · OUR METHOD — 3-PANEL FEATURE ============ -->
+  <section class="band band--ivory" style="padding-top:var(--space-md); padding-bottom:var(--space-xl)">
+    <div class="wrap">
+      <div class="method-banner">
+        <div class="band__head" style="text-align:center; max-width:44rem; margin-inline:auto">
+          <span class="eyebrow">The IsleConnect Method</span>
+          <h2>Real Places. Researched Stories. Clearly Labelled Interpretations.</h2>
+          <p class="lede">How we bring quiet landmarks to life without confusing documentation with imagination.</p>
+        </div>
+
+        <div class="method-banner__grid">
+          <div class="method-panel">
+            <div class="method-panel__media">
+              <picture>
+                <source srcset="assets/img/method-present-day.webp" type="image/webp">
+                <img src="assets/img/method-present-day.jpg" alt="Present day view of Royal Victoria Arcade interior rotunda" width="600" height="375" loading="lazy">
+              </picture>
+              <span class="method-panel__badge">Present Day</span>
+            </div>
+            <div class="method-panel__body">
+              <span class="method-panel__step">1. Real Place</span>
+              <p class="method-panel__text">We begin on the ground: high-resolution photographic survey and architectural audits of the physical site as it stands today.</p>
+            </div>
+          </div>
+
+          <div class="method-panel">
+            <div class="method-panel__media">
+              <picture>
+                <source srcset="assets/img/method-archive-drawing.webp" type="image/webp">
+                <img src="assets/img/method-archive-drawing.jpg" alt="Original 1837 archival architectural engraving of Royal Victoria Arcade" width="600" height="375" loading="lazy">
+              </picture>
+              <span class="method-panel__badge">Archive Evidence — 1837</span>
+            </div>
+            <div class="method-panel__body">
+              <span class="method-panel__step">2. Archive Evidence</span>
+              <p class="method-panel__text">We unearth primary documents, historic municipal plans and archival engravings to ground each scene in authentic local character.</p>
+            </div>
+          </div>
+
+          <div class="method-panel">
+            <div class="method-panel__media">
+              <picture>
+                <source srcset="assets/img/method-ai-interpretation.webp" type="image/webp">
+                <img src="assets/img/method-ai-interpretation.jpg" alt="Evidence-led digital reconstruction of Royal Victoria Arcade c.1837" width="600" height="375" loading="lazy">
+              </picture>
+              <span class="method-panel__badge">AI-Assisted Interpretation</span>
+            </div>
+            <div class="method-panel__body">
+              <span class="method-panel__step">3. Labelled Interpretation</span>
+              <p class="method-panel__text">We recreate lost moments with rigorous digital reconstruction — supervised frame by frame and clearly labelled as an interpretation.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row btn-row--centre" style="margin-top:var(--space-lg)">
+          <a class="btn btn--primary" href="explore.html">Explore the stories</a>
+          <a class="btn btn--ghost-dark" href="how-we-work.html">See how we work</a>
         </div>
       </div>
     </div>
@@ -911,6 +1095,17 @@ def build_index():
 
         <article class="story story--sub">
           <div class="story__media">
+            <img src="assets/img/card-town-hall.jpg" width="1600" height="900" loading="lazy" decoding="async"
+                 alt="Ryde Town Hall past, present and future">
+          </div>
+          <span class="card__cat">Ryde 140</span>
+          <h3><a href="ryde/ryde-town-hall.html">Ryde Town Hall</a></h3>
+          <p>A familiar corner seen across nearly two centuries.</p>
+          {marks('recon', 'archive')}
+        </article>
+
+        <article class="story story--sub">
+          <div class="story__media">
             <img src="assets/img/card-wartime.jpg" width="1600" height="900" loading="lazy" decoding="async"
                  alt="An anti-aircraft crew at Puckpool Battery">
           </div>
@@ -979,6 +1174,47 @@ def build_index():
     </div>
   </section>
 
+  <!-- ============ BRIDGE · WHAT COULD ISLECONNECT HELP YOU CHANGE? ============ -->
+  <section class="band band--navy" aria-labelledby="change-h">
+    <div class="wrap">
+      <div class="band__head">
+        <span class="eyebrow">Consultancy &amp; Pilots</span>
+        <h2 id="change-h">What could IsleConnect help you change?</h2>
+        <p class="lede">Some organisations already have a story. Others have a visibility, visitor or engagement problem and are unsure where to begin.</p>
+      </div>
+      <div class="grid grid--2" style="margin-bottom:var(--space-lg); gap:var(--space-lg)">
+        <div>
+          <p>IsleConnect provides focused consultancy and small, measurable pilots for:</p>
+          <div class="bridge-grid">
+            <div class="bridge-audience-card">
+              <h4>Independent businesses</h4>
+              <p>Seeking more discovery, walk-in interest and direct customer action.</p>
+            </div>
+            <div class="bridge-audience-card">
+              <h4>Visitor attractions</h4>
+              <p>Wanting a stronger before, during and after-visit story experience.</p>
+            </div>
+            <div class="bridge-audience-card">
+              <h4>Community organisations</h4>
+              <p>Holding stories, historical archives or valuable local knowledge.</p>
+            </div>
+            <div class="bridge-audience-card">
+              <h4>Towns &amp; partnerships</h4>
+              <p>Connecting multiple venues into one coherent, walkable route.</p>
+            </div>
+          </div>
+        </div>
+        <div class="bridge-card">
+          <h3 style="color:var(--ivory)">Start small and measurable</h3>
+          <p style="color:var(--ink-on-dark-muted)">You do not need to commission a complete platform. Start with one location, one customer problem or one story worth testing.</p>
+          <div class="btn-row" style="margin-top:var(--space-md)">
+            <a class="btn btn--primary" href="consultancy.html" data-ic-event="consultancy_view">Explore consultancy and pilots</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ 6 · FOR LOCAL VENUES AND BUSINESSES ============ -->
   <section class="band band--ivory" aria-labelledby="partners-h">
     <div class="wrap">
@@ -1002,7 +1238,7 @@ def build_index():
         </div>
       </div>
       <div class="btn-row" style="margin-top:var(--space-lg)">
-        <a class="btn btn--primary" href="for-partners.html">Become a Ryde partner</a>
+        <a class="btn btn--primary" href="work-with-us.html">Work with us</a>
       </div>
     </div>
   </section>
@@ -1053,7 +1289,7 @@ def build_index():
         <p>Ryde is where we are proving the model. The same approach can later bring books, attractions and destinations to life.</p>
         <div class="btn-row btn-row--centre">
           <a class="btn btn--primary" href="explore.html">Explore the stories</a>
-          <a class="btn btn--ghost-light" href="for-partners.html">Become a Ryde partner</a>
+          <a class="btn btn--ghost-light" href="work-with-us.html">Become a Ryde partner</a>
         </div>
       </div>
     </div>
@@ -1334,11 +1570,33 @@ def build_story(slug):
         </article>
 """
 
+    extra_head = ""
+    if slug == "ryde-town-hall":
+        extra_head = """<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoObject",
+  "name": "Ryde Town Hall: Past, Present and Future",
+  "description": "Follow Ryde Town Hall across 190 years from its 1831 opening into closure and future civic possibilities. Combines photographic record with clearly labelled AI-assisted historical interpretation and a future concept visualisation.",
+  "thumbnailUrl": [
+    "https://www.isleconnect.co.uk/assets/img/card-town-hall.jpg"
+  ],
+  "uploadDate": "2026-09-04T12:00:00+01:00",
+  "duration": "PT49.5S",
+  "contentUrl": "https://www.isleconnect.co.uk/assets/video/town-hall.mp4",
+  "embedUrl": "https://www.isleconnect.co.uk/ryde/ryde-town-hall.html#watch"
+}
+</script>"""
+
     stop_no = next((st["n"] for st in TRAIL_STOPS if st["slug"] == slug and st["n"]), None)
+    og_img = f"assets/img/{s['poster']}" if s.get('poster') else None
     html = head(f'{s["title"]} — IsleConnect', s["line"], d,
                 page="story", story=slug,
                 trail=s["collection_href"].replace(".html", ""),
-                stop=stop_no)
+                stop=stop_no,
+                extra_head=extra_head,
+                canonical_path=f"ryde/{slug}.html",
+                og_image=og_img)
     html += header("journeys.html", d, over=True)
     # The transcript is emitted by video_block itself, so it travels with the
     # film to every page that embeds it. Nothing to add here.
@@ -1364,6 +1622,84 @@ def build_story(slug):
 
 """
 
+    extra_townhall_block = ""
+    if slug == "ryde-town-hall":
+        extra_townhall_block = f"""    <section class="exp-section">
+      <span class="eyebrow">Timeline</span>
+      <h2>Nearly two centuries at a glance</h2>
+      <p class="notice notice--public" style="margin-bottom:var(--space-md)">
+        <b>Evidential note:</b> Independent specialist historical review is currently pending under our Phase G.3 governance framework. Chronological details and civic accounts below reflect documented municipal minutes, press archives and architectural surveys currently undergoing formal evaluation.
+      </p>
+      <div class="timeline">
+        <div class="timeline__beat">
+          <div class="timeline__year">1831</div>
+          <div class="timeline__desc">Ryde Town Hall opens with its neoclassical columned frontage on Lind Street, establishing a civic presence for the seaside resort.</div>
+        </div>
+        <div class="timeline__beat">
+          <div class="timeline__year">1867–69</div>
+          <div class="timeline__desc">Municipal extension committee records document enlargement including the landmark clock tower and council chambers.</div>
+        </div>
+        <div class="timeline__beat">
+          <div class="timeline__year">1887</div>
+          <div class="timeline__desc">Contemporary local press accounts record civic celebrations and community gatherings for Queen Victoria's Golden Jubilee.</div>
+        </div>
+        <div class="timeline__beat">
+          <div class="timeline__year">Entertainment Era</div>
+          <div class="timeline__desc">Decades of dances, concerts, theatrical performances and town meetings establish the hall as Ryde's social beating heart.</div>
+        </div>
+        <div class="timeline__beat">
+          <div class="timeline__year">Closure</div>
+          <div class="timeline__desc">Municipal reorganization and maintenance challenges lead to the hall's closure in the early 21st century. The doors fall quiet.</div>
+        </div>
+        <div class="timeline__beat">
+          <div class="timeline__year">Future Possibility</div>
+          <div class="timeline__desc">Community proposals and imaginative stewardship explore new life for the hall as a vibrant cultural and civic space.</div>
+        </div>
+      </div>
+      <p class="notice notice--public" style="margin-top:var(--space-md)">
+        <b>FUTURE CONCEPT VISUALISATION — NO APPROVED SCHEME IMPLIED.</b> The gathering depicted in the film's closing sequence is an evidence-led conceptual interpretation designed to stimulate community discussion. It does not represent an approved architectural or planning scheme.
+      </p>
+    </section>
+
+    <section class="exp-section">
+      <span class="eyebrow">Community</span>
+      <h2>What could this corner become?</h2>
+      <div class="nearby">
+        <div>
+          <span class="nearby__kind">Have your say</span>
+          <h3>A place for community conversation</h3>
+          <p>Ryde Town Hall belongs to the town's history and its future. If you have memories, historical photographs, or ideas about how this landmark can serve the community again, we want to hear from you.</p>
+        </div>
+        <a class="btn btn--primary" href="{rel('contact.html', d)}">Share your thoughts</a>
+      </div>
+      <div class="nearby" style="margin-top:var(--space-md)">
+        <div>
+          <span class="nearby__kind">Case Study</span>
+          <h3>How this project was created</h3>
+          <p>See how IsleConnect combined archival records, on-site photography, and evidence-led visualisation to turn a quiet building into an active community conversation.</p>
+        </div>
+        <a class="btn btn--ghost-dark" href="{rel('consultancy.html#town-hall-case-study', d)}">Read the case study</a>
+      </div>
+    </section>
+"""
+
+    sources_block = f"""    <section class="exp-section">
+      <details class="source-notes" open>
+        <summary><h2 style="display:inline;font-size:inherit;margin:0">Sources and interpretation notes</h2></summary>
+        <div style="margin-top:var(--space-md)">
+          <ul class="sources">
+{sources}
+          </ul>
+        </div>
+      </details>
+    </section>""" if slug == "ryde-town-hall" else f"""    <section class="exp-section">
+      <span class="eyebrow">Sources</span>
+      <h2>Where this comes from</h2>
+      <ul class="sources">
+{sources}
+      </ul>
+    </section>"""
+
     html += f"""
   <section class="hero hero--short">
     <div class="hero__media" aria-hidden="true">
@@ -1384,7 +1720,7 @@ def build_story(slug):
 
   <div class="wrap">
 
-    <section class="exp-section">
+    <section class="exp-section" id="watch">
       <h2 class="visually-hidden">The experience</h2>
 {video_block(s['video'], s['poster'], s['video_label'], s['video_note'], d, variant='')}    </section>
 
@@ -1396,7 +1732,7 @@ def build_story(slug):
       </div>
     </section>
 
-    <section class="exp-section">
+{extra_townhall_block}    <section class="exp-section">
       <span class="eyebrow">Visit</span>
       <h2>Practical details</h2>
       <ul class="facts">
@@ -1411,13 +1747,7 @@ def build_story(slug):
 {nxt}      </div>
     </section>
 
-    <section class="exp-section">
-      <span class="eyebrow">Sources</span>
-      <h2>Where this comes from</h2>
-      <ul class="sources">
-{sources}
-      </ul>
-    </section>
+{sources_block}
   </div>
 
   <section class="closer">
@@ -1426,7 +1756,7 @@ def build_story(slug):
         <h2>Be part of the journey.</h2>
         <p>IsleConnect helps visitors discover the story around them — and gives nearby businesses and attractions a natural place in that journey.</p>
         <div class="btn-row btn-row--centre">
-          <a class="btn btn--primary" href="{rel('for-partners.html', d)}">Become a Ryde partner</a>
+          <a class="btn btn--primary" href="{rel('work-with-us.html', d)}">Become a Ryde partner</a>
         </div>
       </div>
     </div>
@@ -1631,10 +1961,10 @@ def build_how_we_work():
 
 def build_partners():
     d = 0
-    html = head("For Partners — IsleConnect",
-                "Be part of the journey. IsleConnect helps visitors discover the story around them.", d,
+    html = head("Work With Us — IsleConnect",
+                "Partnerships, consultancy and place activation across Ryde and the Isle of Wight.", d,
                 page="partners")
-    html += header("for-partners.html", d, over=True)
+    html += header("work-with-us.html", d, over=True)
     html += f"""
   <section class="hero hero--short">
     <div class="hero__media" aria-hidden="true">
@@ -1644,11 +1974,12 @@ def build_partners():
     <div class="hero__inner">
       <div class="wrap">
         <div class="hero__content">
-          <span class="eyebrow">For partners</span>
-          <h1>Be part of the journey.</h1>
-          <p class="hero__sub">IsleConnect helps visitors discover the story around them — and gives nearby businesses and attractions a natural place in that journey.</p>
+          <span class="eyebrow">Work With Us</span>
+          <h1>Turn local curiosity into footfall and action.</h1>
+          <p class="hero__sub">Whether you run an independent venue, manage a visitor attraction, hold community archives, or want to launch a 30-day footfall pilot — IsleConnect connects stories to real-world outcomes.</p>
           <div class="btn-row">
-            <a class="btn btn--primary" href="contact.html" data-ic-event="sponsor_enquiry">Become a Ryde partner</a>
+            <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="enquiry_form_start">Book a 20-minute mapping call</a>
+            <a class="btn btn--ghost-light" href="consultancy.html" data-ic-event="consultancy_view">Explore consultancy &amp; pilots</a>
           </div>
         </div>
       </div>
@@ -1660,15 +1991,15 @@ def build_partners():
       <div class="grid grid--3">
         <div class="benefit">
           <h3>Be discovered</h3>
-          <p>Appear when someone is already exploring nearby.</p>
+          <p>Appear when someone is already exploring nearby and ready to stop.</p>
         </div>
         <div class="benefit">
           <h3>Tell your story</h3>
-          <p>Show people what makes your venue or place worth stopping for.</p>
+          <p>Show people what makes your venue or place worth stopping for — not a generic directory listing.</p>
         </div>
         <div class="benefit">
-          <h3>See what happens next</h3>
-          <p>Understand whether visitors continue, explore or take an action.</p>
+          <h3>Measure what happens</h3>
+          <p>Understand whether visitors continue, explore, ask for directions or take action.</p>
         </div>
       </div>
     </div>
@@ -1692,23 +2023,47 @@ def build_partners():
   <section class="band band--ivory-deep">
     <div class="wrap">
       <div class="band__head">
-        <h2>Which one sounds like you?</h2>
+        <span class="eyebrow">Five ways to work together</span>
+        <h2>Which path fits your organisation?</h2>
+        <p class="lede">Choose the collaboration model that matches your goals, resources and timeline.</p>
       </div>
       <div class="grid grid--3">
         <div class="audience">
+          <span class="eyebrow">Local Discovery</span>
           <h3>Venues &amp; businesses</h3>
-          <p>An attraction, a venue, a shop or a caf&eacute; near a story or on a route.</p>
+          <p>An attraction, shop or caf&eacute; near a story or on a walking route seeking visitors.</p>
           <a class="link-arrow" href="partners/venues.html">For venues</a>
         </div>
         <div class="audience">
-          <h3>Authors &amp; creators</h3>
-          <p>A book, a body of research, a collection or an archive rooted in real places.</p>
-          <a class="link-arrow" href="partners/creators.html">For creators</a>
+          <span class="eyebrow">Community</span>
+          <h3>Organisations &amp; archives</h3>
+          <p>Councils, heritage trusts, or community groups holding local knowledge and archives.</p>
+          <a class="link-arrow" href="partners/organisations.html">For organisations</a>
         </div>
         <div class="audience">
-          <h3>Organisations</h3>
-          <p>A council, a trust, a museum or a community group holding local knowledge.</p>
-          <a class="link-arrow" href="partners/organisations.html">For organisations</a>
+          <span class="eyebrow">Creative</span>
+          <h3>Authors &amp; creators</h3>
+          <p>A book, a body of research, or a collection rooted in Island places and people.</p>
+          <a class="link-arrow" href="partners/creators.html">For creators</a>
+        </div>
+      </div>
+
+      <div class="grid grid--2" style="margin-top:var(--space-lg); gap:var(--space-lg)">
+        <div class="bridge-card" style="background:var(--ivory); border:1px solid var(--border)">
+          <span class="eyebrow" style="color:var(--navy)">Consultancy &amp; Small Pilots</span>
+          <h3 style="color:var(--navy); margin-top:0.3rem">Packaged Strategy Pathways</h3>
+          <p style="color:var(--ink)">From a 10-day Local Visibility Review to a 30-Day Story-to-Footfall Pilot or full Connected Place Programme.</p>
+          <div class="btn-row" style="margin-top:var(--space-md)">
+            <a class="btn btn--primary" href="consultancy.html" data-ic-event="consultancy_view">Explore consultancy</a>
+          </div>
+        </div>
+        <div class="bridge-card" style="background:var(--ivory); border:1px solid var(--border)">
+          <span class="eyebrow" style="color:var(--navy)">Free Initial Step</span>
+          <h3 style="color:var(--navy); margin-top:0.3rem">20-Minute Mapping Call</h3>
+          <p style="color:var(--ink)">A focused diagnostic conversation to map your current visibility gaps and identify quick wins for footfall.</p>
+          <div class="btn-row" style="margin-top:var(--space-md)">
+            <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="enquiry_form_start">Request a mapping call</a>
+          </div>
         </div>
       </div>
     </div>
@@ -1723,7 +2078,7 @@ def build_partners():
     <div class="closer__inner">
       <div class="wrap">
         <h2>Start a conversation.</h2>
-        <p>Tell us what you run or what you hold. We'll tell you honestly whether we think there's a story in it.</p>
+        <p>Tell us what you run or what you hold. We'll tell you honestly whether there's a story in it and what practical next steps look like.</p>
         <div class="btn-row btn-row--centre">
           <a class="btn btn--primary" href="contact.html">Get in touch</a>
         </div>
@@ -1732,7 +2087,7 @@ def build_partners():
   </section>
 """
     html += footer(d)
-    write("for-partners.html", html)
+    write("work-with-us.html", html)
 
 
 PARTNER_PAGES = {
@@ -1800,11 +2155,11 @@ def build_partner_page(key):
 
 """
     html = head(f"{title} — IsleConnect", sub, d, page=f"partner-{key}")
-    html += header("for-partners.html", d)
+    html += header("work-with-us.html", d)
     html += f"""
   <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
     <div class="wrap">
-      <p class="crumb" style="color:var(--ink-muted)"><a href="{rel('for-partners.html', d)}" style="color:var(--ink-muted)">For partners</a> &nbsp;/&nbsp; {title}</p>
+      <p class="crumb" style="color:var(--ink-muted)"><a href="{rel('work-with-us.html', d)}" style="color:var(--ink-muted)">Work with us</a> &nbsp;/&nbsp; {title}</p>
       <div class="band__head">
         <span class="eyebrow">For partners</span>
         <h1>{title}</h1>
@@ -1815,6 +2170,7 @@ def build_partner_page(key):
 {pts}      </div>
       <div class="btn-row" style="margin-top:var(--space-lg)">
         <a class="btn btn--primary" href="{rel('contact.html', d)}" data-ic-event="sponsor_enquiry">Start a conversation</a>
+        <a class="btn btn--ghost-dark" href="{rel('consultancy.html#packages', d)}">View packages &amp; pricing</a>
       </div>
     </div>
   </section>
@@ -1856,6 +2212,357 @@ def build_partner_page(key):
     write(f"partners/{key}.html", html)
 
 
+def build_consultancy():
+    d = 0
+    html = head("Consultancy &amp; Pilots — IsleConnect",
+                "Turn local attention into useful action. Evidence-led place consultancy, 30-day pilots and connected programmes.", d,
+                page="consultancy")
+    html += header("consultancy.html", d, over=True)
+    html += f"""
+  <section class="hero hero--short">
+    <div class="hero__media" aria-hidden="true">
+      <img src="assets/img/card-explore-ryde.jpg" width="1600" height="504" alt="" loading="lazy" decoding="async">
+    </div>
+    <div class="hero__scrim" aria-hidden="true"></div>
+    <div class="hero__inner">
+      <div class="wrap">
+        <div class="hero__content">
+          <span class="eyebrow">Consultancy &amp; Pilots</span>
+          <h1>Turn local attention into useful action.</h1>
+          <p class="hero__sub">We help destinations, attractions and independent businesses connect overlooked local stories to measurable discovery, footfall routing and customer engagement.</p>
+          <div class="btn-row">
+            <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="enquiry_form_start">Book a 20-minute mapping call</a>
+            <a class="btn btn--ghost-light" href="#pathways">View our pathways</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ THREE PRACTICAL PATHWAYS TO ACTION ============ -->
+  <section class="band band--ivory" id="pathways">
+    <div class="wrap">
+      <div class="band__head">
+        <span class="eyebrow">Three Practical Pathways to Action</span>
+        <h2>Begin where your place feels the friction.</h2>
+        <p class="lede">Each pathway is a fixed commitment with a defined scope and a review point. One leads to the next only if the evidence justifies it.</p>
+      </div>
+
+      <div class="pathway-stack">
+        <!-- Pathway 1: Diagnostic -->
+        <div class="pathway-card pathway-card--light">
+          <div class="pathway-card__summary">
+            <div class="pathway-card__meta">
+              <span class="eyebrow">Diagnostic</span>
+            </div>
+            <div class="pathway-card__header">
+              <h3 class="pathway-card__title">1. Local Visibility Review</h3>
+              <div class="pathway-card__price-wrap">
+                <div class="pathway-card__price">£195</div>
+              </div>
+            </div>
+            <p class="pathway-card__desc">A fast, rigorous assessment of how easily visitors find your venue, story or experience on the ground and across digital search.</p>
+            <div class="pathway-card__callout pathway-card__callout--tint">
+              Credited in full against a 30-Day Pilot commissioned within 30 days.
+            </div>
+            <div class="pathway-card__action">
+              <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="visibility_review_click">Discuss a Local Visibility Review</a>
+            </div>
+          </div>
+          <div class="pathway-card__details">
+            <div class="pathway-card__heading">Included</div>
+            <div class="pathway-card__grid">
+              <ul class="card-checklist">
+                <li>Website and search presence review</li>
+                <li>On-the-ground discoverability check</li>
+                <li>Visitor-information consistency</li>
+                <li>Missing or conflicting information</li>
+              </ul>
+              <ul class="card-checklist">
+                <li>One priority customer journey</li>
+                <li>Three practical opportunities</li>
+                <li>Written priority action plan</li>
+                <li>Recommended next pathway and scope</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pathway 2: Small Pilot (Most Popular - Dark Navy Card) -->
+        <div class="pathway-card pathway-card--dark">
+          <div class="pathway-card__summary">
+            <div class="pathway-card__meta">
+              <span class="eyebrow" style="color:var(--gold)">Small Pilot &middot; Most Popular</span>
+            </div>
+            <div class="pathway-card__header">
+              <h3 class="pathway-card__title">2. 30-Day Story-to-Footfall Pilot</h3>
+              <div class="pathway-card__price-wrap">
+                <div class="pathway-card__price">£950</div>
+              </div>
+            </div>
+            <p class="pathway-card__desc">Test the model on your doorstep with a focused, measurable campaign connecting an evidence-led story to customer visits.</p>
+            <div class="pathway-card__callout pathway-card__callout--dark">
+              Includes one Signature Story Reel and a working visitor journey.
+            </div>
+            <div class="pathway-card__action">
+              <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="pilot_enquiry_click">Explore a 30-Day Pilot</a>
+            </div>
+          </div>
+          <div class="pathway-card__details">
+            <div class="pathway-card__heading">Included</div>
+            <div class="pathway-card__grid">
+              <ul class="card-checklist card-checklist--on-dark">
+                <li>Strategy and visitor-journey session</li>
+                <li>Verified venue profile</li>
+                <li>One priority audience and objective</li>
+                <li>Campaign plan with 8–12 content ideas</li>
+                <li>Two to three finished launch assets</li>
+              </ul>
+              <ul class="card-checklist card-checklist--on-dark">
+                <li>Main short-form campaign film</li>
+                <li>Working visitor journey prototype</li>
+                <li>QR artwork and counter display</li>
+                <li>Measurement setup</li>
+                <li>End-of-pilot results and next steps</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pathway 3: Strategic -->
+        <div class="pathway-card pathway-card--light">
+          <div class="pathway-card__summary">
+            <div class="pathway-card__meta">
+              <span class="eyebrow">Strategic</span>
+            </div>
+            <div class="pathway-card__header">
+              <h3 class="pathway-card__title">3. Connected Place Programme</h3>
+              <div class="pathway-card__price-wrap">
+                <div class="pathway-card__price">£1,900</div>
+                <div class="pathway-card__price-sub">paid in full month one or £750 per month over 3 months</div>
+              </div>
+            </div>
+            <p class="pathway-card__desc">For town partnerships, business improvement districts, heritage trusts and destinations uniting multiple venues into a route.</p>
+            <p class="pathway-card__scope">Scoped per programme after a mapping call. Minimum three-month term.</p>
+            <div class="pathway-card__action">
+              <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="enquiry_form_start">Map a Connected Place Programme</a>
+            </div>
+          </div>
+          <div class="pathway-card__details">
+            <div class="pathway-card__heading">Included</div>
+            <div class="pathway-card__grid">
+              <ul class="card-checklist">
+                <li>Route design across multiple venues</li>
+                <li>Anchor story or feature film</li>
+                <li>Mobile landing pages and calls to action</li>
+                <li>Shared campaign assets and signage</li>
+              </ul>
+              <ul class="card-checklist">
+                <li>Gateway or destination placement</li>
+                <li>Partner onboarding and trail stops</li>
+                <li>Monthly planning and content updates</li>
+                <li>Programme performance reporting</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ INDIVIDUAL PIECES & METHOD ============ -->
+  <section class="band band--ivory-deep" id="packages">
+    <div class="wrap">
+      <div class="band__head">
+        <span class="eyebrow">Add to Any Pathway</span>
+        <h2>Individual pieces, priced on their own.</h2>
+      </div>
+
+      <div class="pieces-grid">
+        <!-- Piece 1: Trail Stop Partner -->
+        <div class="piece-card">
+          <div>
+            <div class="piece-card__header">
+              <h3 class="piece-card__title">Trail Stop Partner</h3>
+              <div class="piece-card__price">£295</div>
+            </div>
+            <p class="piece-card__desc">Join an existing route. Verified profile, one visitor hook, mobile page with directions, QR artwork and trail placement for the 12-month pilot period.</p>
+          </div>
+          <div style="margin-top:var(--space-md)">
+            <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="trail_partner_click">Join as a Trail Stop Partner</a>
+          </div>
+        </div>
+
+        <!-- Piece 2: Signature Story Reel -->
+        <div class="piece-card">
+          <div>
+            <div class="piece-card__header">
+              <h3 class="piece-card__title">Signature Story Reel</h3>
+              <div class="piece-card__price">£450</div>
+            </div>
+            <p class="piece-card__desc">One researched 20–40 second film: script, approved imagery, narration, captions, labelled interpretation, one revision round and a finished vertical master.</p>
+          </div>
+          <div style="margin-top:var(--space-md)">
+            <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="story_reel_click">Commission a Story Reel</a>
+          </div>
+        </div>
+
+        <!-- Piece 3: Verified Place Knowledge Pack -->
+        <div class="piece-card">
+          <div>
+            <div class="piece-card__header">
+              <h3 class="piece-card__title">Verified Place Knowledge Pack</h3>
+              <div class="piece-card__price">From £450</div>
+            </div>
+            <p class="piece-card__desc">An approved, reusable record of your place: contact and seasonal information, accessibility, descriptions, FAQs, source evidence and an asset register that search platforms and AI assistants can read correctly.</p>
+          </div>
+          <div style="margin-top:var(--space-md)">
+            <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="knowledge_pack_click">Enquire about a Knowledge Pack</a>
+          </div>
+        </div>
+
+        <!-- Piece 4: Ongoing Growth Partnership -->
+        <div class="piece-card">
+          <div>
+            <div class="piece-card__header">
+              <h3 class="piece-card__title">Ongoing Growth Partnership</h3>
+              <div class="piece-card__price">£750<span class="piece-card__price-sub">/month<br>three-month term &middot; £2,250</span></div>
+            </div>
+            <p class="piece-card__desc">Monthly planning, up to two agreed content updates, seasonal offer changes, information upkeep, performance monitoring and a monthly summary.</p>
+          </div>
+          <div style="margin-top:var(--space-md)">
+            <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="growth_partnership_click">Explore Ongoing Partnership</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- The IsleConnect Method -->
+      <div style="margin-top:var(--space-2xl)">
+        <div class="band__head">
+          <span class="eyebrow">The IsleConnect Method</span>
+          <h2>Real places. Researched stories. Clearly labelled interpretations.</h2>
+        </div>
+
+        <div class="method-row">
+          <div class="method-col">
+            <h3>1. Real Place</h3>
+            <p>High-resolution photographic survey and architectural audit of the site as it stands today.</p>
+          </div>
+          <div class="method-col">
+            <h3>2. Archive Evidence</h3>
+            <p>Primary documents, municipal plans and archival engravings ground each scene in authentic local character.</p>
+          </div>
+          <div class="method-col">
+            <h3>3. Labelled Interpretation</h3>
+            <p>Digital reconstruction supervised frame by frame and labelled clearly as interpretation.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Terms Notice -->
+      <p class="terms-notice">Introductory rates for the IsleConnect pilot phase. No VAT is currently charged. Paid media, travel, location filming, specialist review, archive licensing and other third-party costs are excluded unless stated, and are agreed before work begins. Every project has a defined scope, approval process and review point. Nothing renews automatically.</p>
+    </div>
+  </section>
+
+  <!-- ============ CASE STUDY · RYDE TOWN HALL ============ -->
+  <section class="band band--navy" id="town-hall-case-study" aria-labelledby="cs-h">
+    <div class="wrap">
+      <div class="band__head">
+        <span class="eyebrow">Commercial &amp; Civic Case Study</span>
+        <h2 id="cs-h">Ryde Town Hall: Turning a Familiar Building into a Public Conversation</h2>
+        <p class="lede">How IsleConnect used archival research, on-site photography and evidence-led visualisation to re-engage the community with a quiet landmark.</p>
+      </div>
+
+      <div class="grid grid--2" style="gap:var(--space-xl); align-items:start">
+        <div>
+          <div class="video-poster-card" style="margin-bottom:var(--space-md)">
+            <img src="assets/img/card-town-hall.jpg" alt="Ryde Town Hall" width="1600" height="900" loading="lazy">
+            <a href="ryde/ryde-town-hall.html#watch" class="video-poster-card__play" aria-label="Watch the Town Hall project film" data-ic-event="townhall_play">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+            </a>
+          </div>
+          <p class="notice notice--public" style="background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.15); color:var(--ivory)">
+            <b>FUTURE CONCEPT VISUALISATION — NO APPROVED SCHEME IMPLIED.</b> The civic gathering scene is an evidence-led concept visualisation to stimulate conversation.
+          </p>
+
+          <div class="bridge-card" style="margin-top:var(--space-md)">
+            <h4 style="color:var(--gold); margin-bottom:0.5rem">What we will measure</h4>
+            <p style="color:var(--ivory); font-size:0.95rem; margin-bottom:0.5rem">As the Town Hall initiative rolls out, IsleConnect tracks verified public engagement without surveillance:</p>
+            <ul class="ticks ticks--on-dark" style="font-size:0.9rem">
+              <li><b>Engagement depth:</b> Full video completion rate &amp; transcript reads</li>
+              <li><b>Civic interest:</b> Verified community responses to the future use prompt</li>
+              <li><b>Onward exploration:</b> QR scans connecting to Lind Street &amp; High Street independent venues</li>
+            </ul>
+          </div>
+        </div>
+
+        <div>
+          <h3 style="color:var(--ivory)">The Challenge</h3>
+          <p style="color:var(--ink-on-dark-muted)">Ryde Town Hall has stood in Lind Street since 1831, serving as council chamber, court and concert hall. Following its closure in the early 2000s, the building became a closed facade. Passers-by saw peeling paint and boarded doors; many forgot what the building had stood for, and newer residents had never set foot inside.</p>
+
+          <h3 style="color:var(--ivory); margin-top:var(--space-md)">The Response</h3>
+          <p style="color:var(--ink-on-dark-muted)">Rather than issuing a dense heritage report that few would read, IsleConnect developed a 50-second narrative arc spanning 190 years: from opening day in 1831, through Queen Victoria's 1887 Jubilee celebrations, into closure — ending with a visualised future possibility to prompt public dialogue.</p>
+
+          <h3 style="color:var(--ivory); margin-top:var(--space-md)">Our 7-Point Process</h3>
+          <ol class="ticks ticks--on-dark" style="padding-left:1.2rem">
+            <li><b>Primary source gathering:</b> 1830s architectural plans and 1880s municipal records.</li>
+            <li><b>On-site survey:</b> High-resolution photographic audit of architectural masonry and facade condition.</li>
+            <li><b>Rigorous claims validation:</b> Separating verified architectural facts from interpretive elements.</li>
+            <li><b>Evidence-led AI production:</b> Historical recreation supervised and checked frame by frame.</li>
+            <li><b>Strict disclosure governance:</b> Clear legal labeling distinguishing records from conceptual visions.</li>
+            <li><b>Friction-free deployment:</b> Fast mobile web delivery with zero app download friction.</li>
+            <li><b>Civic call-to-action:</b> Direct community feedback channel asking "What could this corner become?".</li>
+          </ol>
+
+          <div class="btn-row" style="margin-top:var(--space-lg)">
+            <a class="btn btn--primary" href="ryde/ryde-town-hall.html" data-ic-event="townhall_play">Watch the project</a>
+            <a class="btn btn--ghost-light" href="contact.html#mapping-conversation" data-ic-event="enquiry_form_start">Could your place tell a stronger story?</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TRUST & RIGOUR ============ -->
+  <section class="band band--ivory">
+    <div class="wrap">
+      <div class="band__head">
+        <span class="eyebrow">Why IsleConnect</span>
+        <h2>Integrity first. Speed second.</h2>
+      </div>
+      <div class="grid grid--3">
+        <div class="benefit">
+          <h3>Human editorial control</h3>
+          <p>We believe in artificial intelligence as an accelerator for research and production, never as an unsupervised publisher. Historical and local statements are reviewed against documented evidence.</p>
+        </div>
+        <div class="benefit">
+          <h3>Zero-app friction</h3>
+          <p>Visitors do not download apps for a 2-minute experience. Our stories load cleanly in any modern mobile browser via lightweight, accessible web standards.</p>
+        </div>
+        <div class="benefit">
+          <h3>Transparent outcomes</h3>
+          <p>We are preparing to measure video engagement, transcript use, onward actions and visitor routing without profiling individual visitors.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="closer">
+    <div class="closer__inner">
+      <div class="wrap">
+        <h2>Start with a 20-minute mapping call.</h2>
+        <p>Whether you have an under-visited landmark, a quiet high-street corner, or an archive waiting for an audience, let's look at the practical options.</p>
+        <div class="btn-row btn-row--centre">
+          <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="enquiry_form_start">Book a mapping call</a>
+        </div>
+      </div>
+    </div>
+  </section>
+"""
+    html += footer(d)
+    write("consultancy.html", html)
+
+
 def build_about():
     d = 0
     html = head("About — IsleConnect",
@@ -1886,12 +2593,25 @@ def build_about():
   <section class="band band--ivory-deep">
     <div class="wrap">
       <div class="band__head">
+        <span class="eyebrow">Leadership</span>
+        <h2>Built from practical business experience</h2>
+      </div>
+      <div class="measure">
+        <p>IsleConnect is founded and directed in Ryde by <b>David Grannum</b>, working as an Applied AI Consultant. The practice brings together over twenty years of building and running commercial operations with advanced technical training, including the Oxford Artificial Intelligence Programme and advanced AI Solution Architect training.</p>
+        <p>Too much conversation around AI focuses either on speculative hype or automated generic content that ignores local reality. IsleConnect takes the opposite stance: practical, evidence-led systems where machine intelligence accelerates research, data structuring and visual reconstruction, while real people retain absolute authority over what is said and published.</p>
+        <p>Every story, partnership and consultancy engagement is built on that foundation: rigorous provenance, respect for local creators, and clear commercial measurement.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="band band--ivory">
+    <div class="wrap">
+      <div class="band__head">
         <span class="eyebrow">Who we are</span>
         <h2>Historians, artists, venues and the people who keep local knowledge</h2>
       </div>
       <div class="measure">
-        <p>IsleConnect is being developed in Ryde by David Grannum, bringing together practical business experience, AI production, local research and a growing network of people who understand the Island's places and stories.</p>
-        <p>We work with historians, artists, venues, authors and community organisations. They retain authority over their knowledge and material; IsleConnect helps turn it into an accessible public experience.</p>
+        <p>We work in close collaboration with historians, artists, venues, authors and community organisations across Ryde and the Isle of Wight. They retain full authority over their knowledge, memories and archive material; IsleConnect provides the platform to turn it into an engaging, accessible public experience.</p>
         <p>Artificial intelligence supports research, visualisation and production, but it does not decide what is published. Sources, rights and interpretations remain subject to human review.</p>
       </div>
     </div>
@@ -1901,10 +2621,10 @@ def build_about():
     <div class="closer__inner">
       <div class="wrap">
         <h2>Start with one story.</h2>
-        <p>Two are live now. More are being built with the people who know them.</p>
+        <p>Three are live now. More are being built with the people who know them.</p>
         <div class="btn-row btn-row--centre">
           <a class="btn btn--primary" href="explore.html">Explore the stories</a>
-          <a class="btn btn--ghost-light" href="for-partners.html">Become a Ryde partner</a>
+          <a class="btn btn--ghost-light" href="work-with-us.html">Work with us</a>
         </div>
       </div>
     </div>
@@ -1915,63 +2635,111 @@ def build_about():
 
 
 def contact_route():
-    """A form that posts nowhere is worse than no form. Until a handler exists,
-    offer the route that actually reaches a person."""
+    """Diagnostic mapping conversation form and direct email fallback."""
     e = SITE["contact_email"]
-    if not SITE["form_endpoint"]:
-        return f"""      <div class="nearby" style="max-width:34rem">
+    endpoint = SITE["form_endpoint"] or ""
+    return f"""      <div class="grid grid--2" style="gap:var(--space-xl); align-items:start">
         <div>
-          <span class="nearby__kind">Email us</span>
-          <h3><a href="mailto:{e}">{e}</a></h3>
-          <p>Tell us your name, what you run or hold, and a few sentences about it. We read everything and we reply.</p>
-        </div>
-        <a class="btn btn--primary" href="mailto:{e}?subject=IsleConnect%20enquiry">Write to us</a>
-      </div>
+          <span class="eyebrow" id="mapping-conversation">Diagnostic Conversation</span>
+          <h2>Request a 20-minute mapping call</h2>
+          <p>If you run a venue, manage an attraction, or hold local records, let's map where your visibility and visitor journey can improve quickly.</p>
+          <p>Tell us a little about your business or project. A real person reviews every request and responds within one working day.</p>
 
-      <div class="measure" style="margin-top:var(--space-xl)">
-        <p>We use what you send us only to reply and to discuss working together. We don't add you to a mailing list and we don't pass your details to anyone else. Our <a href="privacy.html">privacy notice</a> sets out the detail.</p>
+          <form class="diagnostic-form" method="post" action="/api/enquiry" data-fallback-action="{endpoint}">
+            <!-- Honeypot anti-spam field: hidden from humans, trips bot submissions -->
+            <div style="position:absolute; left:-9999px; top:-9999px" aria-hidden="true">
+              <label for="diag-hp">Leave this field blank</label>
+              <input id="diag-hp" name="_hp_company" type="text" tabindex="-1" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="diag-name">Your name *</label>
+              <input id="diag-name" name="name" type="text" autocomplete="name" required placeholder="e.g. Jane Smith">
+            </div>
+            <div class="field">
+              <label for="diag-org">Business or organisation *</label>
+              <input id="diag-org" name="organisation" type="text" required placeholder="e.g. The Coastal Gallery">
+            </div>
+            <div class="field">
+              <label for="diag-web">Website or social link</label>
+              <input id="diag-web" name="website" type="url" placeholder="https://example.co.uk">
+            </div>
+            <div class="field">
+              <label for="diag-loc">Location</label>
+              <input id="diag-loc" name="location" type="text" placeholder="e.g. Union Street, Ryde">
+            </div>
+            <div class="field">
+              <label>What would you most like to improve?</label>
+              <div class="options-grid">
+                <label class="option-label"><input type="checkbox" name="improve[]" value="footfall"> Visits and footfall</label>
+                <label class="option-label"><input type="checkbox" name="improve[]" value="bookings"> Bookings &amp; enquiries</label>
+                <label class="option-label"><input type="checkbox" name="improve[]" value="visibility"> Online discovery &amp; maps</label>
+                <label class="option-label"><input type="checkbox" name="improve[]" value="content"> Story &amp; content consistency</label>
+                <label class="option-label"><input type="checkbox" name="improve[]" value="visitor-exp"> Visitor on-site experience</label>
+                <label class="option-label"><input type="checkbox" name="improve[]" value="community"> Community engagement</label>
+                <label class="option-label"><input type="checkbox" name="improve[]" value="workflow"> AI &amp; content workflow</label>
+              </div>
+            </div>
+            <div class="field">
+              <label for="diag-notes">Tell us briefly about what you run or hold</label>
+              <span class="hint">A few sentences is plenty.</span>
+              <textarea id="diag-notes" name="notes" rows="4" placeholder="Tell us about your venue, the challenge you face, or the story you would like to tell."></textarea>
+            </div>
+            <div class="field">
+              <label for="diag-email">Your email *</label>
+              <input id="diag-email" name="email" type="email" autocomplete="email" required placeholder="jane@example.co.uk">
+            </div>
+            <div class="field">
+              <label for="diag-phone">Phone number (optional)</label>
+              <input id="diag-phone" name="phone" type="tel" autocomplete="tel" placeholder="07123 456789">
+            </div>
+            <p class="hint">We use what you send only to reply and discuss working together under legitimate interests. See our <a href="privacy.html">privacy notice</a>.</p>
+            <div style="margin-top:var(--space-md)">
+              <button class="btn btn--primary" type="submit">Request mapping conversation</button>
+            </div>
+          </form>
+
+          <div id="enquiry-thank-you" class="thank-you-card" style="display:none">
+            <span class="eyebrow" style="color:var(--gold)">Thank you</span>
+            <h3 style="color:var(--navy); margin-top:0.2rem">We have received your details</h3>
+            <p>David Grannum or a member of the team will review your project and get back to you within one working day.</p>
+            <p>If you'd like to book a 20-minute conversation slot directly on our calendar, you can do so below:</p>
+            <div class="btn-row" style="margin-top:var(--space-md)">
+              <a class="btn btn--primary" href="mailto:{e}?subject=Booking%2020-Minute%20Mapping%20Call" data-ic-event="mapping_call_booked">Confirm mapping call via email</a>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding-top:var(--space-lg)">
+          <div class="nearby" style="background:var(--ivory); border:1px solid var(--border)">
+            <div>
+              <span class="nearby__kind">Direct Contact</span>
+              <h3>Email us directly</h3>
+              <p>Prefer to write an email without filling in a form? David reads every message and replies personally.</p>
+              <p style="margin-top:var(--space-sm); font-size:1.1rem"><b><a href="mailto:{e}">{e}</a></b></p>
+            </div>
+            <a class="btn btn--ghost-dark" href="mailto:{e}?subject=IsleConnect%20enquiry">Write an email</a>
+          </div>
+
+          <div class="measure" style="margin-top:var(--space-xl)">
+            <h3>Our commitment</h3>
+            <p>We do not use high-pressure sales. We will tell you frankly whether your venue or project is a good fit for IsleConnect, what can be accomplished quickly, and what is best left alone.</p>
+            <p>Your details are never sold. They are shared only with contracted service providers where necessary to handle your enquiry. See our <a href="privacy.html">privacy notice</a>.</p>
+          </div>
+        </div>
       </div>
-"""
-    return f"""      <form class="form" method="post" action="{SITE['form_endpoint']}">
-        <div class="field">
-          <label for="name">Your name</label>
-          <input id="name" name="name" type="text" autocomplete="name" required>
-        </div>
-        <div class="field">
-          <label for="email">Email</label>
-          <input id="email" name="email" type="email" autocomplete="email" required>
-        </div>
-        <div class="field">
-          <label for="kind">What do you run or hold?</label>
-          <select id="kind" name="kind">
-            <option>A venue or business in or near Ryde</option>
-            <option>A book or body of writing</option>
-            <option>Records, photographs or local knowledge</option>
-            <option>A council, trust or community organisation</option>
-            <option>Something else</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="about">Tell us about it</label>
-          <span class="hint">A few sentences is plenty.</span>
-          <textarea id="about" name="about"></textarea>
-        </div>
-        <p class="hint">We use what you send only to reply and to discuss working together. See our <a href="privacy.html">privacy notice</a>.</p>
-        <div><button class="btn btn--primary" type="submit">Send</button></div>
-      </form>
 """
 
 def build_contact():
     d = 0
-    html = head("Contact — IsleConnect", "Tell us about your venue, story or records.", d, page="contact")
+    html = head("Contact &amp; Mapping Conversation — IsleConnect", "Request a 20-minute mapping conversation or write to us directly.", d, page="contact")
     html += header("", d)
     html += f"""
   <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
     <div class="wrap">
       <div class="band__head">
-        <span class="eyebrow">Contact</span>
-        <h1>Start a conversation</h1>
-        <p class="lede">No form to fill in. Write to us and a person reads it.</p>
+        <span class="eyebrow">Start a conversation</span>
+        <h1>Turn local curiosity into useful action</h1>
+        <p class="lede">Book a diagnostic mapping call or get in touch about partnerships, stories or consultancy.</p>
       </div>
 
 {contact_route()}
@@ -2053,7 +2821,7 @@ def build_accessibility():
           <li>Every page is built to be operated by keyboard alone, with a visible focus outline and a skip link to the main content. We have walked the main routes this way; we have not exhaustively tested every control.</li>
           <li>Text and background colours were chosen against the WCAG 2.2 AA contrast ratios, and we have checked the main text and interface colours. The full palette has not been independently verified.</li>
           <li>Text resizes without breaking the layout, and the page reflows to a single column on small screens.</li>
-          <li>Every film has a written transcript on the same page, in a panel you can open — including where the same film also appears on the homepage or a journey page. Our build refuses to publish a page that carries a film without one.</li>
+          <li>Written transcript, synchronised captions and accessible playback controls to improve access to the film. Our build refuses to publish a page that carries a film without a transcript beside it.</li>
           <li>Nothing moves, flashes or plays automatically. Video starts only when you press play.</li>
           <li>If your device or browser is set to reduce motion, animation is switched off and the content still works.</li>
           <li>Our press-and-hold reveal can also be operated as a simple on/off toggle, because holding a button is not possible with some assistive technology.</li>
@@ -2063,7 +2831,7 @@ def build_accessibility():
         <h2>What is not good enough yet</h2>
         <ul>
           <li>No independent accessibility audit has been carried out. Everything above is our own assessment of our own work.</li>
-          <li>Our films have captions burned into the picture rather than selectable caption tracks. Transcripts cover the content, but captions cannot yet be resized or restyled.</li>
+          <li>Our films have synchronised captions and transcripts, but custom caption styling or re-positioning is limited to default browser settings.</li>
           <li>The site has not yet been tested with a screen reader by someone who uses one daily. We would rather say so than imply otherwise.</li>
           <li>We have not tested with speech input, screen magnification, or a switch device.</li>
           <li>Some of the places we write about are genuinely difficult to reach. We describe the access honestly rather than pretending otherwise, but we cannot change the ground.</li>
@@ -2233,6 +3001,7 @@ if __name__ == "__main__":
             build_soon(_key)
 
     build_partners()
+    build_consultancy()
     for key in PARTNER_PAGES:
         build_partner_page(key)
     build_about()

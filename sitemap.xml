@@ -2,9 +2,9 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://www.isleconnect.co.uk/about.html</loc></url>
   <url><loc>https://www.isleconnect.co.uk/accessibility.html</loc></url>
+  <url><loc>https://www.isleconnect.co.uk/consultancy.html</loc></url>
   <url><loc>https://www.isleconnect.co.uk/contact.html</loc></url>
   <url><loc>https://www.isleconnect.co.uk/explore.html</loc></url>
-  <url><loc>https://www.isleconnect.co.uk/for-partners.html</loc></url>
   <url><loc>https://www.isleconnect.co.uk/how-we-work.html</loc></url>
   <url><loc>https://www.isleconnect.co.uk/</loc></url>
   <url><loc>https://www.isleconnect.co.uk/journeys.html</loc></url>
@@ -17,8 +17,10 @@
   <url><loc>https://www.isleconnect.co.uk/ryde/puckpool-battery.html</loc></url>
   <url><loc>https://www.isleconnect.co.uk/ryde/royal-victoria-arcade.html</loc></url>
   <url><loc>https://www.isleconnect.co.uk/ryde/ryde-pier.html</loc></url>
+  <url><loc>https://www.isleconnect.co.uk/ryde/ryde-town-hall.html</loc></url>
   <url><loc>https://www.isleconnect.co.uk/ryde/seaview.html</loc></url>
   <url><loc>https://www.isleconnect.co.uk/ryde/union-street.html</loc></url>
   <url><loc>https://www.isleconnect.co.uk/terms.html</loc></url>
   <url><loc>https://www.isleconnect.co.uk/wartime-trail.html</loc></url>
+  <url><loc>https://www.isleconnect.co.uk/work-with-us.html</loc></url>
 </urlset>

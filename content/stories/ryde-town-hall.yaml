@@ -1,0 +1,75 @@
+id: ryde-town-hall
+slug: ryde/ryde-town-hall
+title: "Ryde Town Hall: Past, Present and Future"
+line: A familiar corner seen across nearly two centuries.
+status: published
+collections: [ryde-140]
+location:
+  name: "Lind Street, Ryde"
+  town: Ryde
+marks: [recon, archive]
+media:
+  video: town-hall
+  poster: card-town-hall.jpg
+  label: "Evidence-led AI reconstruction & concept visualisation"
+  note: 49.5 seconds · sound on
+  rights: cleared
+thenNow: null
+governance:
+  evidenceStatus: lead
+  rightsStatus: under_review
+  specialistReviewStatus: pending
+  editorialReview: complete
+  localReview: complete
+  historicalReview: pending
+  rightsRecord: complete
+  publicationApproval: approved
+  approver: "David Grannum"
+  approvalDate: 2026-09-04
+  lastReviewed: 2026-09-04
+  contentVersion: "1.2"
+  exactSourceLocators:
+    - "Isle of Wight Record Office: Lind Street Municipal Complex Plans (1830–1831)"
+    - "Borough of Ryde Town Hall Extension Committee Minutes (1867–1869)"
+    - "Hampshire Telegraph & Sussex Chronicle: Queen Victoria Golden Jubilee Ryde Celebrations (June 1887)"
+    - "Lind Street Streetscape Drawing: Archival material (provenance and repository citation currently under review)"
+    - "Contemporary Photographic Survey & Laser Measure Audit, Lind Street Facade (September 2026)"
+  claims:
+    - id: claim-1831-opening
+      statement: "Ryde Town Hall opened in 1831 with its neoclassical columned frontage on Lind Street."
+      evidenceStatus: source_located
+      specialistReviewStatus: pending
+      sources: ["Isle of Wight Record Office: Lind Street Municipal Complex Plans (1830–1831)"]
+    - id: claim-1867-expansion
+      statement: "Municipal enlargement between 1867 and 1869 added the landmark clock tower and council chambers."
+      evidenceStatus: source_located
+      specialistReviewStatus: pending
+      sources: ["Borough of Ryde Town Hall Extension Committee Minutes (1867–1869)"]
+    - id: claim-1887-jubilee
+      statement: "Queen Victoria's Golden Jubilee in 1887 was celebrated under the Town Hall neoclassical columns."
+      evidenceStatus: source_inspected
+      specialistReviewStatus: pending
+      sources: ["Hampshire Telegraph & Sussex Chronicle (June 1887)"]
+    - id: claim-1905-drawing
+      statement: "Historic architectural streetscape drawing records Lind Street elevations and Town Hall detail (provenance under review)."
+      evidenceStatus: lead
+      specialistReviewStatus: pending
+      sources: ["Archival streetscape drawing (provenance under review)"]
+    - id: claim-closure-early2000s
+      statement: "The Town Hall ceased regular civic and court functions and closed its doors in the early 2000s."
+      evidenceStatus: source_inspected
+      specialistReviewStatus: approved
+      sources: ["Isle of Wight Council & Ryde Social Heritage records"]
+    - id: claim-future-concept
+      statement: "The civic gathering scene visualises future community possibilities to prompt local dialogue; no approved scheme implied."
+      evidenceStatus: corroborated
+      specialistReviewStatus: not_required
+  interpretationAssumptions:
+    - "Neoclassical facade reconstructed from 1830s municipal elevations and surviving masonry joints"
+    - "1887 Jubilee decorations reconstructed from press descriptions and contemporary Isle of Wight archival photographs"
+    - "Future community gathering is an evidence-led concept visualisation designed to prompt local dialogue; no approved architectural or planning scheme is implied"
+journey:
+  next: [royal-victoria-arcade, puckpool-battery]
+nearby: null
+internal:
+  note: Published with visual timeline, community prompt, 49.5s voiceover master v1.2, claim-level governance, and commercial case study link.

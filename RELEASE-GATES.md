@@ -143,6 +143,20 @@ Cache confirmed gone by ____________________ on ____________
 
 Confirmed by ____________________ on ____________
 
+## 5 · Enquiry form operational delivery & serverless endpoint
+
+The diagnostic mapping form posts to `/api/enquiry` with direct fallback to `{endpoint}`.
+Preflight cannot test live third-party delivery or serverless edge invocation.
+
+- [ ] Formspree upstream target configured (`FORMSPREE_ENDPOINT` or default endpoint `https://formspree.io/f/xvgowwzn`)
+- [ ] Test submission delivered end-to-end to `david@isleconnect.co.uk`
+- [ ] Confirmation thank-you card displays cleanly upon submission
+- [ ] Client-side fallback gracefully offers direct `mailto:david@isleconnect.co.uk` if upstream returns 502/network error
+- [ ] Honeypot field (`_hp_company`) silently traps spam without false positives
+- [ ] Zero PII (names, emails, phones, notes) logged in edge telemetry or console
+
+Confirmed by ____________________ on ____________
+
 ---
 
 Only when every box above is ticked should this merge to `main`.

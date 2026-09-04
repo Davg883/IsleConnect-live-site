@@ -55,7 +55,7 @@ BANNED = content_policy.BANNED_PHRASES
 # has been switched off deliberately. See the identity step in main().
 MUST_EXIST = [
     "/", "/explore.html", "/journeys.html", "/how-we-work.html",
-    "/for-partners.html", "/about.html", "/contact.html",
+    "/work-with-us.html", "/about.html", "/contact.html",
     "/privacy.html", "/accessibility.html", "/terms.html",
     "/ryde-140.html", "/wartime-trail.html",
     "/ryde/royal-victoria-arcade.html", "/ryde/puckpool-battery.html",
@@ -69,7 +69,7 @@ RETIRED = {
     "/explore/bembridge-fort.html":       "/explore.html",
     "/for-venues.html":                   "/partners/venues.html",
     "/for-creators.html":                 "/partners/creators.html",
-    "/work-with-us.html":                 "/for-partners.html",
+    "/for-partners.html":                 "/work-with-us.html",
 }
 
 # Withdrawn, not moved. These must answer 404 or 410 and must NEVER redirect:

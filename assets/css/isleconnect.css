@@ -789,6 +789,11 @@ a:hover { color: var(--navy); }
   line-height: 0;
 }
 .video video { width: 100%; height: auto; display: block; }
+.video--portrait {
+  width: 100%;
+  max-width: 440px;
+  margin-inline: auto;
+}
 .video__caption {
   display: flex;
   flex-wrap: wrap;
@@ -1517,3 +1522,760 @@ a:hover { color: var(--navy); }
 }
 .beyond-band .beyond-list p { font-size: 0.95rem; }
 .beyond-band .btn { font-size: 0.85rem; padding: 0.6rem 1.1rem; }
+
+/* --------------------------------------------------------------------------
+   42. Spotlight feature & video poster card (Town Hall Homepage & Story)
+   -------------------------------------------------------------------------- */
+
+.feature-spotlight {
+  display: grid;
+  gap: var(--space-lg);
+  align-items: center;
+  background: var(--ivory-deep);
+  border-radius: var(--radius-lg);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  box-shadow: var(--shadow-card);
+}
+@media (min-width: 840px) {
+  .feature-spotlight {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+}
+.video-poster-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  background: var(--navy);
+  aspect-ratio: 16 / 9;
+}
+.video-poster-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+.video-poster-card:hover img {
+  transform: scale(1.03);
+}
+.video-poster-card__play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(22, 36, 61, 0.35);
+  transition: background 0.3s ease;
+}
+.video-poster-card__play svg {
+  width: 64px;
+  height: 64px;
+  padding: 14px;
+  background: var(--gold);
+  color: var(--navy);
+  border-radius: 50%;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.video-poster-card__play:hover svg {
+  transform: scale(1.1);
+  background: #f4be47;
+}
+
+/* --------------------------------------------------------------------------
+   43. Bridge Card & ticks on dark
+   -------------------------------------------------------------------------- */
+
+.bridge-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+}
+.bridge-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+@media (min-width: 600px) {
+  .bridge-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.bridge-audience-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius);
+  padding: var(--space-sm) var(--space-md);
+}
+.bridge-audience-card h4 {
+  font-family: var(--font-body);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin: 0 0 0.25rem 0;
+}
+.bridge-audience-card p {
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--ivory);
+  margin: 0;
+}
+.ticks--on-dark li {
+  color: var(--ivory);
+  margin-bottom: var(--space-sm);
+}
+.ticks--on-dark li b {
+  color: var(--gold);
+}
+
+/* --------------------------------------------------------------------------
+   44. Visual Timeline (Town Hall page)
+   -------------------------------------------------------------------------- */
+
+.timeline {
+  display: grid;
+  gap: var(--space-md);
+  margin-block: var(--space-lg);
+  border-left: 3px solid var(--gold);
+  padding-left: var(--space-md);
+}
+.timeline__beat {
+  position: relative;
+  padding-bottom: var(--space-sm);
+}
+.timeline__year {
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 0.2rem;
+}
+.timeline__desc {
+  font-size: 0.95rem;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   45. Diagnostic enquiry form
+   -------------------------------------------------------------------------- */
+
+.diagnostic-form {
+  max-width: 42rem;
+  margin-top: var(--space-md);
+}
+.diagnostic-form .field {
+  margin-bottom: var(--space-md);
+}
+.diagnostic-form .options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.diagnostic-form .option-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background: var(--ivory-deep);
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--rule);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.diagnostic-form .option-label:hover {
+  background: #f0ede6;
+  border-color: var(--navy);
+}
+.diagnostic-form .option-label input {
+  accent-color: var(--navy);
+}
+.thank-you-card {
+  display: none;
+  background: var(--ivory-deep);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--gold);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  margin-top: var(--space-lg);
+  max-width: 42rem;
+}
+
+/* --------------------------------------------------------------------------
+   46. Method Banner (Web-adapted 3-panel component)
+   -------------------------------------------------------------------------- */
+
+.method-banner {
+  margin-top: var(--space-xl);
+}
+.method-banner__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+@media (max-width: 800px) {
+  .method-banner__grid {
+    grid-template-columns: 1fr;
+  }
+}
+.method-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--ivory-deep);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(22, 36, 61, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.method-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(22, 36, 61, 0.08);
+}
+.method-panel__media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--navy);
+}
+.method-panel__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.method-panel__badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  background: rgba(22, 36, 61, 0.88);
+  color: var(--gold);
+  border: 1px solid rgba(212, 163, 89, 0.4);
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(4px);
+}
+.method-panel__body {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+.method-panel__step {
+  font-family: var(--font-display);
+  font-size: var(--step-0);
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 0.3rem;
+}
+.method-panel__text {
+  font-size: 0.95rem;
+  color: var(--ink);
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
+/* --------------------------------------------------------------------------
+   46. Card Checklist & Pricing Packages
+   -------------------------------------------------------------------------- */
+
+/* Ensure ticks on ivory / benefit backgrounds don't inherit dark-mode defaults */
+.band--ivory .ticks,
+.band--ivory-deep .ticks,
+.benefit .ticks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
+}
+.band--ivory .ticks li,
+.band--ivory-deep .ticks li,
+.benefit .ticks li {
+  color: var(--ink);
+  border-top: 1px solid var(--rule);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+.band--ivory .ticks li::before,
+.band--ivory-deep .ticks li::before,
+.benefit .ticks li::before {
+  color: var(--teal);
+}
+
+/* Reusable card checklist */
+.card-checklist {
+  list-style: none;
+  margin: var(--space-md) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.card-checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.93rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.card-checklist li::before {
+  content: "✓";
+  color: var(--teal);
+  font-weight: 700;
+  font-size: 1.1em;
+  flex-shrink: 0;
+  margin-top: -0.05em;
+}
+.card-checklist--2col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem 1.25rem;
+}
+@media (min-width: 680px) {
+  .card-checklist--2col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Pricing Grid & Cards */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+  margin-top: var(--space-lg);
+}
+@media (min-width: 768px) {
+  .pricing-grid--2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .pricing-grid--3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.pricing-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--rule);
+  padding: clamp(1.4rem, 1rem + 1.5vw, 2.2rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 18px rgba(22, 36, 61, 0.05);
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.pricing-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(22, 36, 61, 0.09);
+}
+.pricing-card--featured {
+  border: 2px solid var(--teal);
+  box-shadow: 0 6px 24px rgba(31, 122, 128, 0.12);
+}
+.pricing-card__badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--teal);
+  background: rgba(31, 122, 128, 0.1);
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius);
+  margin-bottom: var(--space-xs);
+}
+.pricing-card--featured .pricing-card__badge {
+  background: var(--teal);
+  color: var(--white);
+}
+.pricing-card__title {
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+  color: var(--navy);
+  margin: 0 0 0.4rem 0;
+  line-height: 1.25;
+}
+.pricing-card__price {
+  font-size: clamp(1.45rem, 1.2rem + 0.8vw, 2rem);
+  font-weight: 800;
+  color: var(--navy);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+.pricing-card__price-sub {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+.pricing-card__sub {
+  font-size: 0.93rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  margin-bottom: 0.75rem;
+}
+.pricing-card__callout {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--teal);
+  background: rgba(31, 122, 128, 0.06);
+  border-left: 3px solid var(--teal);
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0 var(--space-sm) 0;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.pricing-card__heading {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--navy);
+  margin: 0.75rem 0 0.3rem 0;
+}
+.pricing-card__note {
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: var(--ink-muted);
+  font-style: italic;
+  margin-top: var(--space-sm);
+  padding-top: var(--space-xs);
+  border-top: 1px dashed var(--rule);
+}
+.pricing-card__footer {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-sm);
+}
+
+/* --------------------------------------------------------------------------
+   47. Sales PDF Alignment: Pathway Stack & Individual Pieces
+   -------------------------------------------------------------------------- */
+
+.pathway-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  margin-top: var(--space-xl);
+}
+
+.pathway-card {
+  border-radius: var(--radius-lg);
+  padding: clamp(1.5rem, 1.2rem + 1.8vw, 2.8rem);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+  box-shadow: 0 6px 24px rgba(22, 36, 61, 0.06);
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (min-width: 860px) {
+  .pathway-card {
+    grid-template-columns: 1fr 1.2fr;
+    gap: var(--space-xl);
+    align-items: start;
+  }
+}
+
+.pathway-card--light {
+  background: var(--white);
+  border: 1px solid var(--rule);
+}
+
+.pathway-card--dark {
+  background: var(--navy);
+  border: 2px solid var(--gold);
+  color: var(--ivory);
+  box-shadow: 0 10px 32px rgba(22, 36, 61, 0.2);
+}
+
+.pathway-card__summary {
+  display: flex;
+  flex-direction: column;
+}
+
+.pathway-card__meta {
+  margin-bottom: var(--space-2xs);
+}
+
+.pathway-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.pathway-card__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 1.15rem + 0.8vw, 1.85rem);
+  color: var(--navy);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.pathway-card--dark .pathway-card__title {
+  color: var(--white);
+}
+
+.pathway-card__price-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+@media (min-width: 500px) {
+  .pathway-card__price-wrap {
+    align-items: flex-end;
+  }
+}
+
+.pathway-card__price {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 1.4rem + 1.2vw, 2.4rem);
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1;
+}
+
+.pathway-card--dark .pathway-card__price {
+  color: var(--gold);
+}
+
+.pathway-card__price-sub {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+  text-align: left;
+  max-width: 200px;
+  line-height: 1.3;
+  margin-top: 0.25rem;
+}
+@media (min-width: 500px) {
+  .pathway-card__price-sub {
+    text-align: right;
+  }
+}
+
+.pathway-card__desc {
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: var(--ink);
+  margin: var(--space-xs) 0 var(--space-md) 0;
+}
+
+.pathway-card--dark .pathway-card__desc {
+  color: var(--ink-on-dark-muted);
+}
+
+.pathway-card__callout {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  margin-bottom: var(--space-md);
+}
+
+.pathway-card__callout--tint {
+  background: #f7f1e6;
+  border: 1px solid rgba(200, 155, 60, 0.3);
+  color: var(--navy);
+  font-weight: 600;
+}
+
+.pathway-card__callout--dark {
+  background: rgba(255, 255, 255, 0.06);
+  border-left: 3px solid var(--gold);
+  color: var(--ivory);
+  font-weight: 500;
+}
+
+.pathway-card__scope {
+  font-size: 0.88rem;
+  font-style: italic;
+  color: var(--ink-muted);
+  margin-bottom: var(--space-md);
+}
+
+.pathway-card__action {
+  margin-top: auto;
+  padding-top: var(--space-xs);
+}
+
+.pathway-card__details {
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-md);
+}
+
+@media (min-width: 860px) {
+  .pathway-card__details {
+    border-top: none;
+    border-left: 1px solid var(--rule);
+    padding-top: 0;
+    padding-left: var(--space-xl);
+  }
+  .pathway-card--dark .pathway-card__details {
+    border-left-color: rgba(244, 239, 231, 0.15);
+  }
+}
+
+.pathway-card--dark .pathway-card__details {
+  border-top-color: rgba(244, 239, 231, 0.15);
+}
+
+.pathway-card__heading {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--navy);
+  margin-bottom: var(--space-sm);
+}
+
+.pathway-card--dark .pathway-card__heading {
+  color: var(--gold);
+}
+
+.pathway-card__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-sm) var(--space-md);
+}
+
+@media (min-width: 580px) {
+  .pathway-card__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.card-checklist--on-dark li {
+  color: var(--ivory);
+}
+
+.card-checklist--on-dark li::before {
+  color: var(--gold);
+}
+
+/* 2x2 Pieces Grid */
+.pieces-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+  margin-top: var(--space-lg);
+}
+
+@media (min-width: 768px) {
+  .pieces-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.piece-card {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: clamp(1.4rem, 1rem + 1.2vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 16px rgba(22, 36, 61, 0.04);
+}
+
+.piece-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.piece-card__title {
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+  color: var(--navy);
+  margin: 0;
+}
+
+.piece-card__price {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--navy);
+  white-space: nowrap;
+  text-align: right;
+}
+
+.piece-card__price-sub {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+.piece-card__desc {
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: var(--ink);
+  margin: 0;
+}
+
+/* Method row with 3 columns */
+.method-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+  margin-top: var(--space-xl);
+}
+
+@media (min-width: 768px) {
+  .method-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.method-col {
+  border-top: 2px solid var(--gold);
+  padding-top: var(--space-md);
+}
+
+.method-col h3 {
+  font-family: var(--font-display);
+  font-size: var(--step-0);
+  color: var(--navy);
+  margin-bottom: var(--space-xs);
+}
+
+.method-col p {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+/* Pilot Rates & Terms Notice */
+.terms-notice {
+  margin-top: var(--space-xl);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+
+

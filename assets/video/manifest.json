@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "IsleConnect Media Manifest",
+  "generated": "2026-09-04T16:00:00+01:00",
+  "master": {
+    "filename": "ryde_town_hall_voiceover_master_v1.2_isleconnect_outro.mp4",
+    "path": "assets/video/raw/ryde_town_hall_voiceover_master_v1.2_isleconnect_outro.mp4",
+    "sha256": "87a4a43d639259547dcddc5ad04d82457422d7a8e90595114292dab3e9bfeebb",
+    "durationSeconds": 49.50,
+    "width": 1080,
+    "height": 1920,
+    "videoCodec": "h264",
+    "audioCodec": "aac",
+    "version": "1.2",
+    "approval": "approved",
+    "approver": "David Grannum",
+    "approvalDate": "2026-09-04"
+  },
+  "derivatives": [
+    {
+      "filename": "town-hall.mp4",
+      "path": "assets/video/town-hall.mp4",
+      "format": "mp4",
+      "resolution": "1080x1920",
+      "profile": "High",
+      "budgetBytes": 25000000,
+      "purpose": "Full-resolution archival & dedicated story playback"
+    },
+    {
+      "filename": "town-hall-720.mp4",
+      "path": "assets/video/town-hall-720.mp4",
+      "format": "mp4",
+      "resolution": "720x1280",
+      "profile": "Main",
+      "budgetBytes": 5000000,
+      "purpose": "Mobile-first default stream"
+    },
+    {
+      "filename": "town-hall-720.webm",
+      "path": "assets/video/town-hall-720.webm",
+      "format": "webm",
+      "resolution": "720x1280",
+      "codecs": "vp9 / opus",
+      "budgetBytes": 4500000,
+      "purpose": "Modern browser open-standard fallback"
+    },
+    {
+      "filename": "card-town-hall.jpg",
+      "path": "assets/img/card-town-hall.jpg",
+      "format": "jpeg",
+      "budgetBytes": 500000,
+      "purpose": "Universal video poster card"
+    },
+    {
+      "filename": "card-town-hall.webp",
+      "path": "assets/img/card-town-hall.webp",
+      "format": "webp",
+      "budgetBytes": 250000,
+      "purpose": "Modern compressed poster card"
+    },
+    {
+      "filename": "town-hall.vtt",
+      "path": "assets/video/town-hall.vtt",
+      "format": "vtt",
+      "purpose": "Natural phrase-level synchronised English captions"
+    }
+  ]
+}
