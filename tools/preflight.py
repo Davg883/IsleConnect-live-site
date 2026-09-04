@@ -195,7 +195,7 @@ for page in pages:
 # and force one of them to be broken.
 home = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
 home_text = re.sub(r"<(script|style)\b[^>]*>.*?</\1>", " ", home, flags=re.S | re.I)
-home_text = re.sub(r'<p class="(?:video__caption|townhall-feature__provenance)">.*?</p>', " ", home_text, flags=re.S)
+home_text = re.sub(r'<(?:p|span|div)\s+class="[^"]*(?:video__caption|townhall-feature__provenance|method-panel__badge)[^"]*">.*?</(?:p|span|div)>', " ", home_text, flags=re.S)
 home_text = re.sub(r"<[^>]+>", " ", home_text)
 ai_hits = re.findall(r"(?<![A-Za-z])AI(?![A-Za-z])", home_text)
 if len(ai_hits) != 1:

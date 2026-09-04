@@ -326,7 +326,7 @@ def rel(path, depth):
     return ("../" * depth) + path
 
 
-def head(title, description, depth, page="page", story=None, trail=None, stop=None):
+def head(title, description, depth, page="page", story=None, trail=None, stop=None, extra_head=""):
     """page/story/trail/stop become data-ic-* attributes on <body>, which is
     where the measurement layer reads its context from. See MEASUREMENT.md."""
     events = (f'\n<meta name="ic-events" content="{EVENTS_ENDPOINT}">'
@@ -338,6 +338,7 @@ def head(title, description, depth, page="page", story=None, trail=None, stop=No
         attrs += f' data-ic-trail="{trail}"'
     if stop:
         attrs += f' data-ic-stop="{stop}"'
+    extra = f"\n{extra_head}" if extra_head else ""
     return f"""<!DOCTYPE html>
 <html lang="en-GB">
 <head>
@@ -356,7 +357,7 @@ def head(title, description, depth, page="page", story=None, trail=None, stop=No
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{rel('assets/css/isleconnect.css', depth)}">
+<link rel="stylesheet" href="{rel('assets/css/isleconnect.css', depth)}">{extra}
 </head>
 <body{attrs}>
 
@@ -607,11 +608,15 @@ def video_block(slug, poster, label, note, depth, variant="720"):
     The transcript is part of the film, not part of the page that happens to
     embed it, so it is emitted here on every page the film appears."""
     src = slug + ("-720" if variant == "720" else "") + ".mp4"
+    track_elem = ""
+    vtt_path = os.path.join(ROOT, "assets", "video", f"{slug}.vtt")
+    if os.path.exists(vtt_path):
+        track_elem = f'\n            <track kind="captions" src="{rel("assets/video/" + slug + ".vtt", depth)}" srclang="en" label="English" default>'
     return f"""        <div class="video">
-          <video controls preload="none" poster="{rel('assets/img/' + poster, depth)}"
+          <video controls preload="metadata" poster="{rel('assets/img/' + poster, depth)}"
                  width="1920" height="1080" playsinline>
             <source src="{rel('assets/video/' + src, depth)}" type="video/mp4">
-            <source src="{rel('assets/video/' + slug + '-720.webm', depth)}" type="video/webm">
+            <source src="{rel('assets/video/' + slug + '-720.webm', depth)}" type="video/webm">{track_elem}
             Your browser cannot play this video.
           </video>
           <p class="video__caption"><b>{label}</b><span>{note}</span></p>
@@ -897,6 +902,68 @@ def build_index():
             <a class="btn btn--primary" href="ryde/ryde-town-hall.html#watch" data-ic-event="townhall_play">Watch the 50-second film</a>
             <a class="btn btn--ghost-dark" href="ryde/ryde-town-hall.html">Explore the story and sources</a>
           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 1c · OUR METHOD — 3-PANEL FEATURE ============ -->
+  <section class="band band--ivory" style="padding-top:var(--space-md); padding-bottom:var(--space-xl)">
+    <div class="wrap">
+      <div class="method-banner">
+        <div class="band__head" style="text-align:center; max-width:44rem; margin-inline:auto">
+          <span class="eyebrow">The IsleConnect Method</span>
+          <h2>Real Places. Researched Stories. Clearly Labelled Interpretations.</h2>
+          <p class="lede">How we bring quiet landmarks to life without confusing documentation with imagination.</p>
+        </div>
+
+        <div class="method-banner__grid">
+          <div class="method-panel">
+            <div class="method-panel__media">
+              <picture>
+                <source srcset="assets/img/method-present-day.webp" type="image/webp">
+                <img src="assets/img/method-present-day.jpg" alt="Ryde Town Hall present day street view" width="600" height="375" loading="lazy">
+              </picture>
+              <span class="method-panel__badge">Present Day</span>
+            </div>
+            <div class="method-panel__body">
+              <span class="method-panel__step">1. Real Place</span>
+              <p class="method-panel__text">We begin on the ground: high-resolution photographic survey and architectural audits of the physical site as it stands today.</p>
+            </div>
+          </div>
+
+          <div class="method-panel">
+            <div class="method-panel__media">
+              <picture>
+                <source srcset="assets/img/method-archive-drawing.webp" type="image/webp">
+                <img src="assets/img/method-archive-drawing.jpg" alt="1905 archive drawing of Lind Street" width="600" height="375" loading="lazy">
+              </picture>
+              <span class="method-panel__badge">Archive Record</span>
+            </div>
+            <div class="method-panel__body">
+              <span class="method-panel__step">2. Archive Evidence</span>
+              <p class="method-panel__text">We unearth primary documents, historic municipal plans and eyewitness drawings to anchor every historical detail in verifiable fact.</p>
+            </div>
+          </div>
+
+          <div class="method-panel">
+            <div class="method-panel__media">
+              <picture>
+                <source srcset="assets/img/method-ai-interpretation.webp" type="image/webp">
+                <img src="assets/img/method-ai-interpretation.jpg" alt="Visualised historic scene in front of Ryde Town Hall" width="600" height="375" loading="lazy">
+              </picture>
+              <span class="method-panel__badge">AI-Assisted Interpretation</span>
+            </div>
+            <div class="method-panel__body">
+              <span class="method-panel__step">3. Labelled Interpretation</span>
+              <p class="method-panel__text">We recreate lost moments with rigorous digital reconstruction — supervised frame by frame and clearly labelled as an interpretation.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row btn-row--centre" style="margin-top:var(--space-lg)">
+          <a class="btn btn--primary" href="explore.html">Explore the stories</a>
+          <a class="btn btn--ghost-dark" href="how-we-work.html">See how we work</a>
         </div>
       </div>
     </div>
@@ -1447,11 +1514,30 @@ def build_story(slug):
         </article>
 """
 
+    extra_head = ""
+    if slug == "ryde-town-hall":
+        extra_head = """<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoObject",
+  "name": "Ryde Town Hall: Past, Present and Future",
+  "description": "Follow Ryde Town Hall across 190 years from its 1831 opening into closure and future civic possibilities. Combines photographic record with clearly labelled AI-assisted historical interpretation and a future concept visualisation.",
+  "thumbnailUrl": [
+    "https://www.isleconnect.co.uk/assets/img/card-town-hall.jpg"
+  ],
+  "uploadDate": "2026-09-04T12:00:00+01:00",
+  "duration": "PT49.5S",
+  "contentUrl": "https://www.isleconnect.co.uk/assets/video/town-hall.mp4",
+  "embedUrl": "https://www.isleconnect.co.uk/ryde/ryde-town-hall.html#watch"
+}
+</script>"""
+
     stop_no = next((st["n"] for st in TRAIL_STOPS if st["slug"] == slug and st["n"]), None)
     html = head(f'{s["title"]} — IsleConnect', s["line"], d,
                 page="story", story=slug,
                 trail=s["collection_href"].replace(".html", ""),
-                stop=stop_no)
+                stop=stop_no,
+                extra_head=extra_head)
     html += header("journeys.html", d, over=True)
     # The transcript is emitted by video_block itself, so it travels with the
     # film to every page that embeds it. Nothing to add here.
@@ -2112,7 +2198,7 @@ def build_consultancy():
             </ul>
           </div>
           <div style="margin-top:var(--space-lg)">
-            <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="visibility_review_click">Request my visibility review</a>
+            <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="visibility_review_click">Discuss a Local Visibility Review</a>
           </div>
         </div>
 
@@ -2129,7 +2215,7 @@ def build_consultancy():
             </ul>
           </div>
           <div style="margin-top:var(--space-lg)">
-            <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="pilot_enquiry_click">Discuss a 30-day pilot</a>
+            <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="pilot_enquiry_click">Explore a 30-Day Pilot</a>
           </div>
         </div>
 
@@ -2146,7 +2232,7 @@ def build_consultancy():
             </ul>
           </div>
           <div style="margin-top:var(--space-lg)">
-            <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="enquiry_form_start">Map a place-based programme</a>
+            <a class="btn btn--primary" href="contact.html#mapping-conversation" data-ic-event="enquiry_form_start">Map a Connected Place Programme</a>
           </div>
         </div>
       </div>
@@ -2173,6 +2259,16 @@ def build_consultancy():
           <p class="notice notice--public" style="background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.15); color:var(--ivory)">
             <b>FUTURE CONCEPT VISUALISATION — NO APPROVED SCHEME IMPLIED.</b> The civic gathering scene is an evidence-led concept visualisation to stimulate conversation.
           </p>
+
+          <div class="bridge-card" style="margin-top:var(--space-md)">
+            <h4 style="color:var(--gold); margin-bottom:0.5rem">What we will measure</h4>
+            <p style="color:var(--ivory); font-size:0.95rem; margin-bottom:0.5rem">As the Town Hall initiative rolls out, IsleConnect tracks verified public engagement without surveillance:</p>
+            <ul class="ticks ticks--on-dark" style="font-size:0.9rem">
+              <li><b>Engagement depth:</b> Full video completion rate &amp; transcript reads</li>
+              <li><b>Civic interest:</b> Verified community responses to the future use prompt</li>
+              <li><b>Onward exploration:</b> QR scans connecting to Lind Street &amp; High Street independent venues</li>
+            </ul>
+          </div>
         </div>
 
         <div>
@@ -2501,7 +2597,7 @@ def build_accessibility():
           <li>Every page is built to be operated by keyboard alone, with a visible focus outline and a skip link to the main content. We have walked the main routes this way; we have not exhaustively tested every control.</li>
           <li>Text and background colours were chosen against the WCAG 2.2 AA contrast ratios, and we have checked the main text and interface colours. The full palette has not been independently verified.</li>
           <li>Text resizes without breaking the layout, and the page reflows to a single column on small screens.</li>
-          <li>Every film has a written transcript on the same page, in a panel you can open — including where the same film also appears on the homepage or a journey page. Our build refuses to publish a page that carries a film without one.</li>
+          <li>Written transcript, synchronised captions and accessible playback controls to improve access to the film. Our build refuses to publish a page that carries a film without a transcript beside it.</li>
           <li>Nothing moves, flashes or plays automatically. Video starts only when you press play.</li>
           <li>If your device or browser is set to reduce motion, animation is switched off and the content still works.</li>
           <li>Our press-and-hold reveal can also be operated as a simple on/off toggle, because holding a button is not possible with some assistive technology.</li>
@@ -2511,7 +2607,7 @@ def build_accessibility():
         <h2>What is not good enough yet</h2>
         <ul>
           <li>No independent accessibility audit has been carried out. Everything above is our own assessment of our own work.</li>
-          <li>Our films have captions burned into the picture rather than selectable caption tracks. Transcripts cover the content, but captions cannot yet be resized or restyled.</li>
+          <li>Our films have synchronised captions and transcripts, but custom caption styling or re-positioning is limited to default browser settings.</li>
           <li>The site has not yet been tested with a screen reader by someone who uses one daily. We would rather say so than imply otherwise.</li>
           <li>We have not tested with speech input, screen magnification, or a switch device.</li>
           <li>Some of the places we write about are genuinely difficult to reach. We describe the access honestly rather than pretending otherwise, but we cannot change the ground.</li>

@@ -1672,3 +1672,82 @@ a:hover { color: var(--navy); }
   max-width: 42rem;
 }
 
+/* --------------------------------------------------------------------------
+   46. Method Banner (Web-adapted 3-panel component)
+   -------------------------------------------------------------------------- */
+
+.method-banner {
+  margin-top: var(--space-xl);
+}
+.method-banner__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+@media (max-width: 800px) {
+  .method-banner__grid {
+    grid-template-columns: 1fr;
+  }
+}
+.method-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--ivory-deep);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(22, 36, 61, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.method-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(22, 36, 61, 0.08);
+}
+.method-panel__media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--navy);
+}
+.method-panel__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.method-panel__badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  background: rgba(22, 36, 61, 0.88);
+  color: var(--gold);
+  border: 1px solid rgba(212, 163, 89, 0.4);
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(4px);
+}
+.method-panel__body {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+.method-panel__step {
+  font-family: var(--font-display);
+  font-size: var(--step-0);
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 0.3rem;
+}
+.method-panel__text {
+  font-size: 0.95rem;
+  color: var(--ink);
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+

@@ -163,6 +163,7 @@
     'pilot_enquiry_click',
     'enquiry_form_start',
     'enquiry_form_submit',
+    'enquiry_form_error',
     'mapping_call_booked'
   ];
 
@@ -331,9 +332,30 @@
     });
     diagForm.addEventListener('submit', function (e) {
       e.preventDefault();
-      track('enquiry_form_submit', null, diagForm);
 
-      // Submit via fetch to endpoint if configured
+      var showSuccess = function () {
+        track('enquiry_form_submit', null, diagForm);
+        diagForm.style.display = 'none';
+        var thankYou = document.getElementById('enquiry-thank-you');
+        if (thankYou) {
+          thankYou.style.display = 'block';
+          thankYou.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      };
+
+      var showError = function () {
+        track('enquiry_form_error', null, diagForm);
+        var errEl = diagForm.querySelector('.form-error-notice');
+        if (!errEl) {
+          errEl = document.createElement('div');
+          errEl.className = 'notice notice--alert form-error-notice';
+          errEl.style.marginTop = 'var(--space-md)';
+          diagForm.appendChild(errEl);
+        }
+        errEl.innerHTML = '<b>Unable to send enquiry.</b> Please check your internet connection or email us directly at <a href="mailto:david@vectis.ai">david@vectis.ai</a>.';
+        errEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      };
+
       var action = diagForm.getAttribute('action');
       if (action && action.indexOf('http') === 0) {
         try {
@@ -342,16 +364,21 @@
             method: 'POST',
             body: formData,
             headers: { 'Accept': 'application/json' }
-          }).catch(function () {});
-        } catch (err) {}
-      }
-
-      // Smooth transition to thank-you state
-      diagForm.style.display = 'none';
-      var thankYou = document.getElementById('enquiry-thank-you');
-      if (thankYou) {
-        thankYou.style.display = 'block';
-        thankYou.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }).then(function (res) {
+            if (res.ok) {
+              showSuccess();
+            } else {
+              showError();
+            }
+          }).catch(function () {
+            showError();
+          });
+        } catch (err) {
+          showError();
+        }
+      } else {
+        // Local preview or endpoint not configured - show thank you directly
+        showSuccess();
       }
     });
   }
