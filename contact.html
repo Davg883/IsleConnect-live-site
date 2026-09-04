@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Contact — IsleConnect</title>
-<meta name="description" content="Tell us about your venue, story or records.">
-<meta property="og:title" content="Contact — IsleConnect">
-<meta property="og:description" content="Tell us about your venue, story or records.">
+<title>Contact &amp; Mapping Conversation — IsleConnect</title>
+<meta name="description" content="Request a 20-minute mapping conversation or write to us directly.">
+<meta property="og:title" content="Contact &amp; Mapping Conversation — IsleConnect">
+<meta property="og:description" content="Request a 20-minute mapping conversation or write to us directly.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="assets/img/card-ryde140.jpg">
 <meta name="theme-color" content="#16243D">
@@ -28,7 +28,7 @@
     <nav class="nav" aria-label="Main">
       <a href="explore.html">Explore</a>
       <a href="journeys.html">Journeys</a>
-      <a href="for-partners.html">For Partners</a>
+      <a href="for-partners.html">Work With Us</a>
       <a href="how-we-work.html">How We Work</a>
       <a href="about.html">About</a>
     </nav>
@@ -39,7 +39,7 @@
 <div class="mobile-nav" id="mobile-nav">
   <a href="explore.html">Explore</a>
   <a href="journeys.html">Journeys</a>
-  <a href="for-partners.html">For Partners</a>
+  <a href="for-partners.html">Work With Us</a>
   <a href="how-we-work.html">How We Work</a>
   <a href="about.html">About</a>
   <a href="contact.html">Contact</a>
@@ -50,22 +50,100 @@
   <section class="band band--ivory" style="padding-top:calc(var(--header-h) + var(--band-y))">
     <div class="wrap">
       <div class="band__head">
-        <span class="eyebrow">Contact</span>
-        <h1>Start a conversation</h1>
-        <p class="lede">No form to fill in. Write to us and a person reads it.</p>
+        <span class="eyebrow">Start a conversation</span>
+        <h1>Turn local curiosity into useful action</h1>
+        <p class="lede">Book a diagnostic mapping call or get in touch about partnerships, stories or consultancy.</p>
       </div>
 
-      <div class="nearby" style="max-width:34rem">
+      <div class="grid grid--2" style="gap:var(--space-xl); align-items:start">
         <div>
-          <span class="nearby__kind">Email us</span>
-          <h3><a href="mailto:david@isleconnect.co.uk">david@isleconnect.co.uk</a></h3>
-          <p>Tell us your name, what you run or hold, and a few sentences about it. We read everything and we reply.</p>
-        </div>
-        <a class="btn btn--primary" href="mailto:david@isleconnect.co.uk?subject=IsleConnect%20enquiry">Write to us</a>
-      </div>
+          <span class="eyebrow" id="mapping-conversation">Diagnostic Conversation</span>
+          <h2>Request a 20-minute mapping call</h2>
+          <p>If you run a venue, manage an attraction, or hold local records, let's map where your visibility and visitor journey can improve quickly.</p>
+          <p>Tell us a little about your business or project. A real person reviews every request and responds within one working day.</p>
 
-      <div class="measure" style="margin-top:var(--space-xl)">
-        <p>We use what you send us only to reply and to discuss working together. We don't add you to a mailing list and we don't pass your details to anyone else. Our <a href="privacy.html">privacy notice</a> sets out the detail.</p>
+          <form class="diagnostic-form" method="post" action="https://formspree.io/f/xvgowwzn">
+            <div class="field">
+              <label for="diag-name">Your name *</label>
+              <input id="diag-name" name="name" type="text" autocomplete="name" required placeholder="e.g. Jane Smith">
+            </div>
+            <div class="field">
+              <label for="diag-org">Business or organisation *</label>
+              <input id="diag-org" name="organisation" type="text" required placeholder="e.g. The Coastal Gallery">
+            </div>
+            <div class="field">
+              <label for="diag-web">Website or social link</label>
+              <input id="diag-web" name="website" type="url" placeholder="https://example.co.uk">
+            </div>
+            <div class="field">
+              <label for="diag-loc">Location</label>
+              <input id="diag-loc" name="location" type="text" placeholder="e.g. Union Street, Ryde">
+            </div>
+            <div class="field">
+              <label>What would you most like to improve?</label>
+              <div class="options-grid">
+                <label class="option-label"><input type="checkbox" name="improve[]" value="footfall"> Visits and footfall</label>
+                <label class="option-label"><input type="checkbox" name="improve[]" value="bookings"> Bookings &amp; enquiries</label>
+                <label class="option-label"><input type="checkbox" name="improve[]" value="visibility"> Online discovery &amp; maps</label>
+                <label class="option-label"><input type="checkbox" name="improve[]" value="content"> Story &amp; content consistency</label>
+                <label class="option-label"><input type="checkbox" name="improve[]" value="visitor-exp"> Visitor on-site experience</label>
+                <label class="option-label"><input type="checkbox" name="improve[]" value="community"> Community engagement</label>
+                <label class="option-label"><input type="checkbox" name="improve[]" value="workflow"> AI &amp; content workflow</label>
+              </div>
+            </div>
+            <div class="field">
+              <label for="diag-notes">Tell us briefly about what you run or hold</label>
+              <span class="hint">A few sentences is plenty.</span>
+              <textarea id="diag-notes" name="notes" rows="4" placeholder="Tell us about your venue, the challenge you face, or the story you would like to tell."></textarea>
+            </div>
+            <div class="field">
+              <label for="diag-email">Your email *</label>
+              <input id="diag-email" name="email" type="email" autocomplete="email" required placeholder="jane@example.co.uk">
+            </div>
+            <div class="field">
+              <label for="diag-phone">Phone number (optional)</label>
+              <input id="diag-phone" name="phone" type="tel" autocomplete="tel" placeholder="07123 456789">
+            </div>
+            <div class="field">
+              <label class="option-label">
+                <input type="checkbox" name="permission" required checked>
+                <span>I am happy for IsleConnect to contact me about this enquiry.</span>
+              </label>
+            </div>
+            <p class="hint">We use what you send only to reply and discuss working together. See our <a href="privacy.html">privacy notice</a>.</p>
+            <div style="margin-top:var(--space-md)">
+              <button class="btn btn--primary" type="submit">Request mapping conversation</button>
+            </div>
+          </form>
+
+          <div id="enquiry-thank-you" class="thank-you-card" style="display:none">
+            <span class="eyebrow" style="color:var(--gold)">Thank you</span>
+            <h3 style="color:var(--navy); margin-top:0.2rem">We have received your details</h3>
+            <p>David Grannum or a member of the team will review your project and get back to you within one working day.</p>
+            <p>If you'd like to book a 20-minute conversation slot directly on our calendar, you can do so below:</p>
+            <div class="btn-row" style="margin-top:var(--space-md)">
+              <a class="btn btn--primary" href="mailto:david@isleconnect.co.uk?subject=Booking%2020-Minute%20Mapping%20Call" data-ic-event="mapping_call_booked">Confirm mapping call via email</a>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding-top:var(--space-lg)">
+          <div class="nearby" style="background:var(--ivory); border:1px solid var(--border)">
+            <div>
+              <span class="nearby__kind">Direct Contact</span>
+              <h3>Email us directly</h3>
+              <p>Prefer to write an email without filling in a form? David reads every message and replies personally.</p>
+              <p style="margin-top:var(--space-sm); font-size:1.1rem"><b><a href="mailto:david@isleconnect.co.uk">david@isleconnect.co.uk</a></b></p>
+            </div>
+            <a class="btn btn--ghost-dark" href="mailto:david@isleconnect.co.uk?subject=IsleConnect%20enquiry">Write an email</a>
+          </div>
+
+          <div class="measure" style="margin-top:var(--space-xl)">
+            <h3>Our commitment</h3>
+            <p>We do not use high-pressure sales. We will tell you frankly whether your venue or project is a good fit for IsleConnect, what can be accomplished quickly, and what is best left alone.</p>
+            <p>Your details are kept strictly confidential and never sold or shared. See our <a href="privacy.html">privacy notice</a>.</p>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -81,6 +159,7 @@
         <ul>
           <li><a href="ryde/royal-victoria-arcade.html">Royal Victoria Arcade</a></li>
           <li><a href="ryde/puckpool-battery.html">Puckpool Battery</a></li>
+          <li><a href="ryde/ryde-town-hall.html">Ryde Town Hall</a></li>
           <li><a href="explore.html">All stories</a></li>
         </ul>
       </div>
@@ -93,11 +172,12 @@
         </ul>
       </div>
       <div>
-        <h4>For partners</h4>
+        <h4>Work with us</h4>
         <ul>
           <li><a href="partners/venues.html">Venues & businesses</a></li>
-          <li><a href="partners/creators.html">Authors & creators</a></li>
-          <li><a href="partners/organisations.html">Organisations</a></li>
+          <li><a href="partners/organisations.html">Community organisations</a></li>
+          <li><a href="consultancy.html">Consultancy & pilots</a></li>
+          <li><a href="for-partners.html">Overview</a></li>
         </ul>
       </div>
       <div>

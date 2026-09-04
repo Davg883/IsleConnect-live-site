@@ -1,0 +1,28 @@
+id: ryde-town-hall
+slug: ryde/ryde-town-hall
+title: "Ryde Town Hall: Past, Present and Future"
+line: A familiar corner seen across nearly two centuries.
+status: published
+collections: [ryde-140]
+location:
+  name: "Lind Street, Ryde"
+  town: Ryde
+marks: [recon, archive, source]
+media:
+  video: town-hall
+  poster: card-town-hall.jpg
+  label: "Evidence-led AI reconstruction & concept visualisation"
+  note: 50 seconds · sound on
+  rights: cleared
+thenNow: null
+governance:
+  editorialReview: complete
+  localReview: complete
+  historicalReview: complete
+  rightsRecord: complete
+  lastReviewed: 2026-09-04
+journey:
+  next: [royal-victoria-arcade, puckpool-battery]
+nearby: null
+internal:
+  note: Published with visual timeline, community prompt and commercial case study link.

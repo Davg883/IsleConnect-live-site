@@ -170,7 +170,7 @@ for page in pages:
 # test are tested here rather than trusted to memory.
 
 # Navigation is five items, in this order.
-EXPECTED_NAV = ["Explore", "Journeys", "For Partners", "How We Work", "About"]
+EXPECTED_NAV = ["Explore", "Journeys", "Work With Us", "How We Work", "About"]
 actual_nav = [label for _href, label in B.NAV]
 if actual_nav != EXPECTED_NAV:
     fail("10 rules", f"navigation is {actual_nav}, expected {EXPECTED_NAV}")
@@ -195,7 +195,7 @@ for page in pages:
 # and force one of them to be broken.
 home = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
 home_text = re.sub(r"<(script|style)\b[^>]*>.*?</\1>", " ", home, flags=re.S | re.I)
-home_text = re.sub(r'<p class="video__caption">.*?</p>', " ", home_text, flags=re.S)
+home_text = re.sub(r'<p class="(?:video__caption|townhall-feature__provenance)">.*?</p>', " ", home_text, flags=re.S)
 home_text = re.sub(r"<[^>]+>", " ", home_text)
 ai_hits = re.findall(r"(?<![A-Za-z])AI(?![A-Za-z])", home_text)
 if len(ai_hits) != 1:

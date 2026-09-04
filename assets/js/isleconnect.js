@@ -154,7 +154,16 @@
     'menu_clicked',
     'booking_clicked',
     'trail_selected',
-    'sponsor_enquiry'
+    'sponsor_enquiry',
+    'townhall_play',
+    'townhall_complete',
+    'townhall_source_open',
+    'consultancy_view',
+    'visibility_review_click',
+    'pilot_enquiry_click',
+    'enquiry_form_start',
+    'enquiry_form_submit',
+    'mapping_call_booked'
   ];
 
   var endpointMeta = document.querySelector('meta[name="ic-events"]');
@@ -291,8 +300,61 @@
     });
     video.addEventListener('ended', function () {
       track('story_completed', null, video);
+      if (id === 'ryde-town-hall' || (video.currentSrc && video.currentSrc.indexOf('town-hall') > -1)) {
+        track('townhall_complete', null, video);
+      }
+    });
+    // Town Hall specific play tracking
+    video.addEventListener('play', function () {
+      if (id === 'ryde-town-hall' || (video.currentSrc && video.currentSrc.indexOf('town-hall') > -1)) {
+        track('townhall_play', null, video);
+      }
     });
   });
+
+  // Town Hall source notes tracking
+  document.querySelectorAll('details.source-notes').forEach(function (dt) {
+    dt.addEventListener('toggle', function () {
+      if (dt.open) track('townhall_source_open', null, dt);
+    });
+  });
+
+  // Diagnostic mapping conversation form handling
+  var diagForm = document.querySelector('.diagnostic-form');
+  if (diagForm) {
+    var formStarted = false;
+    diagForm.addEventListener('focusin', function () {
+      if (!formStarted) {
+        formStarted = true;
+        track('enquiry_form_start', null, diagForm);
+      }
+    });
+    diagForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      track('enquiry_form_submit', null, diagForm);
+
+      // Submit via fetch to endpoint if configured
+      var action = diagForm.getAttribute('action');
+      if (action && action.indexOf('http') === 0) {
+        try {
+          var formData = new FormData(diagForm);
+          window.fetch(action, {
+            method: 'POST',
+            body: formData,
+            headers: { 'Accept': 'application/json' }
+          }).catch(function () {});
+        } catch (err) {}
+      }
+
+      // Smooth transition to thank-you state
+      diagForm.style.display = 'none';
+      var thankYou = document.getElementById('enquiry-thank-you');
+      if (thankYou) {
+        thankYou.style.display = 'block';
+        thankYou.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  }
 
   // Explicit intent, declared in the markup.
   document.addEventListener('click', function (e) {
